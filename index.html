@@ -25,12 +25,9 @@
         #minus { border-bottom: 4px solid #fbbf24; }
     </style>
 </head>
-<body>
-
-    <div id="login-screen">
+<body onclick="checkStorage()"> <div id="login-screen">
         <h1 style="color: var(--twitch-purple)">boomieVS Host</h1>
         <button onclick="login()" class="btn login-btn">CONNECT TWITCH</button>
-        <p id="debug-url" style="font-size: 10px; color: #444; margin-top: 20px;"></p>
     </div>
 
     <div id="main-interface">
@@ -47,17 +44,23 @@
     </div>
 
     <script>
-        // REPLACE THIS WITH YOUR CLIENT ID FROM TWITCH CONSOLE
         const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf'; 
         const CHANNEL = 'bigloubeats81';
+        const REDIRECT_URI = 'https://bigloubeats.github.io/boomieVS/index.html';
 
-        // This automatically matches your GitHub Pages URL
-        const REDIRECT_URI = window.location.origin + window.location.pathname;
-        document.getElementById('debug-url').innerText = "Redirecting to: " + REDIRECT_URI;
+        // Fixes the "Login Modal" issue on mobile
+        function checkStorage() {
+            if (document.hasStorageAccess) {
+                document.hasStorageAccess().then(hasAccess => {
+                    if (!hasAccess) {
+                        document.requestStorageAccess().catch(err => console.log("Storage access denied"));
+                    }
+                });
+            }
+        }
 
         function login() {
             const scope = encodeURIComponent('chat:edit chat:read');
-            // We use encodeURIComponent on the REDIRECT_URI to ensure Twitch accepts it
             const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scope}`;
             window.location.href = authUrl;
         }
@@ -70,9 +73,11 @@
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('main-interface').style.display = 'flex';
             
+            // Optimized Iframe for Mobile
             document.getElementById('chat-target').innerHTML = `
-                <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=${window.location.hostname}&darkpopout" 
-                height="100%" width="100%" allow="autoplay; fullscreen" 
+                <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=bigloubeats.github.io&darkpopout" 
+                height="100%" width="100%" 
+                allow="autoplay; fullscreen; storage-access" 
                 sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-forms"></iframe>`;
 
             const client = new tmi.Client({
@@ -85,7 +90,7 @@
                 if (client.readyState() !== "OPEN") return;
                 client.say(CHANNEL, cmd);
                 document.getElementById('status').innerText = "Sent: " + cmd;
-                setTimeout(() => { document.getElementById('status').innerText = "CONNECTED"; }, 1000);
+                setTimeout(() => { document.getElementById('status').innerText = "CONNECTED"; }, 1500);
             };
 
             client.connect().then(() => {
