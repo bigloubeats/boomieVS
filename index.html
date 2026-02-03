@@ -58,23 +58,41 @@
     </div>
 
     <script>
-const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf'; 
+// 1. Define variables in the global scope immediately
+let client = null;
 const CHANNEL = 'bigloubeats81';
+const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf';
 const REDIRECT_URI = 'https://bigloubeats.github.io/boomieVS/index.html';
 
-// 1. Define send globally IMMEDIATELY so buttons don't crash
+// 2. Define the send function IMMEDIATELY so buttons always find it
 window.send = function(cmd) {
-    console.log("Button pressed, but not connected yet: " + cmd);
     const status = document.getElementById('status');
-    if (status) status.innerText = "NOT LOGGED IN";
+    
+    if (!client || client.readyState() !== "OPEN") {
+        status.innerText = "NOT CONNECTED YET...";
+        status.style.color = "#fbbf24";
+        return;
+    }
+
+    client.say(CHANNEL, cmd)
+        .then(() => {
+            status.innerText = "SENT: " + cmd;
+            status.style.color = "#4ade80";
+            if (navigator.vibrate) navigator.vibrate(50); 
+        })
+        .catch(err => {
+            status.innerText = "ERROR: " + err;
+            status.style.color = "#f87171";
+        });
 };
 
+// 3. Login logic
 function login() {
     const scope = encodeURIComponent('chat:edit chat:read');
     window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scope}`;
 }
 
-// 2. Extract token from URL
+// 4. Token handling
 const hash = window.location.hash.substring(1);
 const params = new URLSearchParams(hash);
 const token = params.get('access_token');
@@ -83,13 +101,13 @@ if (token) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-interface').style.display = 'flex';
 
-    // Load Chat Embed
+    // Load Chat
     document.getElementById('chat-target').innerHTML = `
         <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=bigloubeats.github.io&darkpopout" 
         height="100%" width="100%"></iframe>`;
 
-    // Initialize TMI
-    const client = new tmi.Client({
+    // Initialize TMI Client
+    client = new tmi.Client({
         options: { debug: false },
         connection: { reconnect: true, secure: true },
         identity: {
@@ -99,37 +117,19 @@ if (token) {
         channels: [ CHANNEL ]
     });
 
-    // 3. Redefine send once the client is initialized
-    window.send = function(cmd) {
-        const status = document.getElementById('status');
-        
-        if (client.readyState() !== "OPEN") {
-            status.innerText = "WAITING FOR CONNECTION...";
-            return;
-        }
-
-        client.say(CHANNEL, cmd)
-            .then(() => {
-                status.innerText = "SENT: " + cmd;
-                status.style.color = "#4ade80";
-                if (navigator.vibrate) navigator.vibrate(50); 
-            })
-            .catch(err => {
-                status.innerText = "ERROR: " + err;
-                status.style.color = "#f87171";
-            });
-    };
-
     client.connect()
         .then(() => {
             document.getElementById('status').innerText = "READY AS " + CHANNEL.toUpperCase();
+            document.getElementById('status').style.color = "#4ade80";
         })
         .catch(e => {
             document.getElementById('status').innerText = "AUTH FAILED";
+            document.getElementById('status').style.color = "#f87171";
         });
 }
     </script>
 </body>
 </html>
+
 
 
