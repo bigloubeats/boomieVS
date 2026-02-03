@@ -4,70 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BigLouBeats81 - Host Deck</title>
-    <script src="https://unpkg.com/tmi.js@1.8.5/tmi.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tmi.js/1.8.5/tmi.min.js"></script>
     <style>
         :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
         body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
         /* Left Side: Buttons */
-        .controls { width: 400px; display: grid; grid-template-columns: 1fr; gap: 15px; padding: 20px; align-content: start; border-right: 2px solid #222; }
-        h1 { font-size: 1.2rem; text-align: center; color: var(--twitch-purple); margin-bottom: 20px; }
-        .btn { height: 80px; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; background: #26262c; transition: all 0.2s; border-bottom: 4px solid #000; }
+        .controls { width: 350px; display: grid; grid-template-columns: 1fr; gap: 15px; padding: 20px; align-content: start; border-right: 2px solid #222; z-index: 10; }
+        h1 { font-size: 1.1rem; text-align: center; color: var(--twitch-purple); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .btn { height: 70px; font-size: 1rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; background: #26262c; transition: all 0.2s; border-bottom: 4px solid #000; }
         .btn:hover { background: #323239; transform: translateY(-2px); }
         .btn:active { transform: translateY(2px); border-bottom: 0; }
         
-        /* Command Specific Colors */
-        #start { border-left: 8px solid #4ade80; } /* Green */
-        #catch { border-left: 8px solid #60a5fa; } /* Blue */
-        #drop  { border-left: 8px solid #f87171; } /* Red */
-        #minus { border-left: 8px solid #fbbf24; } /* Amber */
+        /* Command Colors */
+        #start { border-left: 8px solid #4ade80; } 
+        #catch { border-left: 8px solid #60a5fa; } 
+        #drop  { border-left: 8px solid #f87171; } 
+        #minus { border-left: 8px solid #fbbf24; }
 
         /* Right Side: Chat */
-        .chat-container { flex-grow: 1; background: #000; }
+        .chat-container { flex-grow: 1; background: #000; position: relative; }
         iframe { width: 100%; height: 100%; border: none; }
+        
+        #status { font-size: 0.8rem; color: #666; text-align: center; margin-top: 10px; font-family: monospace; }
     </style>
 </head>
 <body>
 
     <div class="controls">
-        <h1>HOST DECK: bigloubeats81</h1>
+        <h1>Host Deck</h1>
         <button id="start" class="btn" onclick="send('!startgame')">START GAME</button>
-        <button id="catch" class="btn" onclick="send('!hostcatch')">CATCH</button>
-        <button id="drop"  class="btn" onclick="send('!hostdrop')">DROP</button>
-        <button id="minus" class="btn" onclick="send('!hostminus')">MINUS</button>
-        <p id="status" style="font-size: 0.8rem; color: #666; text-align: center;">Connecting...</p>
+        <button id="catch" class="btn" onclick="send('!hostcatch')">HOST CATCH</button>
+        <button id="drop"  class="btn" onclick="send('!hostdrop')">HOST DROP</button>
+        <button id="minus" class="btn" onclick="send('!hostminus')">HOST MINUS</button>
+        <div id="status">Initializing...</div>
     </div>
 
     <div class="chat-container">
-<iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io&darkpopout" height="100%" width="100%"></iframe>
+        <iframe 
+            src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io&darkpopout" 
+            height="100%" 
+            width="100%">
+        </iframe>
     </div>
 
     <script>
+        // CONFIGURATION
         const CHANNEL = 'bigloubeats81';
-        // PASTE YOUR GENERATED TOKEN BELOW (Keep the oauth: part)
+        // Replace this with your token from twitchtokengenerator.com
         const OAUTH_TOKEN = 'oauth:12u1pbhgvupaayd6pqu5kfprrfb23m';
 
-        const client = new tmi.Client({
-            identity: { username: CHANNEL, password: OAUTH_TOKEN },
-            channels: [ CHANNEL ]
-        });
+        let client;
 
-        client.connect().then(() => {
-            document.getElementById('status').innerText = "Connected to Chat";
-            document.getElementById('status').style.color = "#4ade80";
-        }).catch(err => {
-            document.getElementById('status').innerText = "Connection Failed";
-            console.error(err);
-        });
+        window.onload = function() {
+            const statusEl = document.getElementById('status');
 
-        function send(command) {
-            client.say(CHANNEL, command)
-                .then(() => console.log(`Sent: ${command}`))
-                .catch(err => alert("Error sending command: " + err));
-        }
+            // 1. Initialize TMI Client
+            client = new tmi.Client({
+                identity: {
+                    username: CHANNEL,
+                    password: OAUTH_TOKEN
+                },
+                channels: [ CHANNEL ]
+            });
+
+            // 2. Define Send Function
+            window.send = function(command) {
+                if (!client || client.readyState() !== "OPEN") {
+                    console.error("Not connected to chat.");
+                    statusEl.innerText = "Error: Not Connected";
+                    return;
+                }
+                
+                client.say(CHANNEL, command)
+                    .then(() => {
+                        console.log("Sent: " + command);
+                        statusEl.innerText = "Sent: " + command;
+                        setTimeout(() => { statusEl.innerText = "Connected"; }, 2000);
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        statusEl.innerText = "Send Failed";
+                    });
+            };
+
+            // 3. Connect to Twitch
+            client.connect()
+                .then(() => {
+                    statusEl.innerText = "Connected to @bigloubeats81";
+                    statusEl.style.color = "#4ade80";
+                })
+                .catch(err => {
+                    statusEl.innerText = "Login Failed - Check Token";
+                    statusEl.style.color = "#f87171";
+                    console.error(err);
+                });
+        };
     </script>
 </body>
-
 </html>
-
-
