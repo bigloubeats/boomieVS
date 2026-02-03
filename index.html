@@ -106,31 +106,35 @@
         const CHANNEL = 'bigloubeats81';
         const OAUTH_TOKEN = 'oauth:12u1pbhgvupaayd6pqu5kfprrfb23m'; 
 
-        let client;
+       let client;
 
-        window.onload = function() {
-            const statusEl = document.getElementById('status');
+    // We define this OUTSIDE of window.onload so it's available immediately
+    window.send = function(command) {
+        if (!client || client.readyState() !== "OPEN") {
+            alert("Still connecting to Twitch... please wait.");
+            return;
+        }
+        client.say(CHANNEL, command)
+            .then(() => {
+                document.getElementById('status').innerText = "Sent: " + command;
+            })
+            .catch(err => console.error(err));
+    };
 
-            client = new tmi.Client({
-                identity: { username: CHANNEL, password: OAUTH_TOKEN },
-                channels: [ CHANNEL ]
-            });
+    window.onload = function() {
+        client = new tmi.Client({
+            identity: { username: CHANNEL, password: OAUTH_TOKEN },
+            channels: [ CHANNEL ]
+        });
 
-            window.send = function(command) {
-                if (client.readyState() !== "OPEN") return;
-                client.say(CHANNEL, command).catch(console.error);
-                
-                statusEl.innerText = "Command Sent: " + command;
-                setTimeout(() => { statusEl.innerText = "Connected"; }, 2000);
-            };
-
-            client.connect().then(() => {
-                statusEl.innerText = "Connected";
-            }).catch(err => {
-                statusEl.innerText = "Auth Error";
-                console.error(err);
-            });
-        };
-    </script>
+        client.connect().then(() => {
+            document.getElementById('status').innerText = "Connected";
+            document.getElementById('status').style.color = "#4ade80";
+        }).catch(err => {
+            document.getElementById('status').innerText = "Auth Error";
+        });
+    };
+</script>
 </body>
 </html>
+
