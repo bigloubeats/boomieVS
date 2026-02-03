@@ -1,128 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>boomieVS - Host</title>
-    <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/1/tmi.min.js"></script>
-    <style>
-        :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
-        * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: white; font-family: -apple-system, system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        #main-interface { display: none; flex-direction: column; height: 100%; }
-        .chat-container { flex: 1; background: #000; border-bottom: 2px solid #333; }
-        iframe { width: 100%; height: 100%; border: none; }
-        .controls { background: #18181b; padding: 15px; padding-bottom: env(safe-area-inset-bottom); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px; margin: 0 auto; }
-        .btn { height: 75px; font-weight: 800; border: none; border-radius: 12px; color: white; background: #26262c; box-shadow: 0 5px 0 #000; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #000; background: #3f3f46; }
-        #start { border-top: 5px solid #4ade80; }
-        #catch { border-top: 5px solid #60a5fa; }
-        #drop  { border-top: 5px solid #f87171; }
-        #minus { border-top: 5px solid #fbbf24; }
-        #status { text-align: center; font-size: 0.7rem; color: #666; margin-top: 12px; font-family: monospace; }
-        .login-btn { background: var(--twitch-purple) !important; padding: 0 40px; box-shadow: 0 4px 0 #4c1d95; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
+  <title>boomieVS - Host</title>
+  <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/1/tmi.min.js"></script>
+  <style>
+    :root {
+      --twitch-purple: #9147ff;
+      --bg: #0e0e10;
+    }
+    * {
+      box-sizing: border-box;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: var(--bg);
+      color: white;
+      font-family: -apple-system, system-ui, sans-serif;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #main-interface {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+    .chat-container {
+      flex: 1;
+      background: #000;
+      border-bottom: 2px solid #333;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .controls {
+      background: #18181b;
+      padding: 15px;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .btn {
+      height: 75px;
+      font-weight: 800;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      background: #26262c;
+      box-shadow: 0 5px 0 #000;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #000;
+      background: #3f3f46;
+    }
+    #start {
+      border-top: 5px solid #4ade80;
+    }
+    #catch {
+      border-top: 5px solid #60a5fa;
+    }
+    #drop {
+      border-top: 5px solid #f87171;
+    }
+    #minus {
+      border-top: 5px solid #fbbf24;
+    }
+    #status {
+      text-align: center;
+      font-size: 0.7rem;
+      color: #666;
+      margin-top: 12px;
+      font-family: monospace;
+    }
+    .login-btn {
+      background: var(--twitch-purple) !important;
+      padding: 0 40px;
+      box-shadow: 0 4px 0 #4c1d95;
+    }
+  </style>
 </head>
 <body>
+  <div id="login-screen">
+    <h1 style="color: var(--twitch-purple)">boomieVS</h1>
+    <button id="login-btn" class="btn login-btn">LOG IN</button>
+  </div>
 
-    <div id="login-screen">
-        <h1 style="color: var(--twitch-purple)">boomieVS</h1>
-        <button id="login-btn" class="btn login-btn">LOG IN</button>
+  <div id="main-interface">
+    <div class="chat-container" id="chat-target"></div>
+    <div class="controls">
+      <div class="grid">
+        <button class="btn" id="start">START</button>
+        <button class="btn" id="catch">CATCH</button>
+        <button class="btn" id="drop">DROP</button>
+        <button class="btn" id="minus">MINUS</button>
+      </div>
+      <div id="status">INITIALIZING...</div>
     </div>
+  </div>
 
-    <div id="main-interface">
-        <div class="chat-container" id="chat-target"></div>
-        <div class="controls">
-            <div class="grid">
-                <!-- Removed inline onclick and just gave them IDs -->
-                <button class="btn" id="start">START</button>
-                <button class="btn" id="catch">CATCH</button>
-                <button class="btn" id="drop">DROP</button>
-                <button class="btn" id="minus">MINUS</button>
-            </div>
-            <div id="status">INITIALIZING...</div>
-        </div>
-    </div>
+  <script>
+    // 1. Setup Variables
+    // Make sure your Twitch Developer Console also uses the exact same redirect URL
+    const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf';
+    const CHANNEL = 'bigloubeats81';
+    const REDIRECT_URI = 'https://bigloubeats.github.io/boomieVS/index.html';
+    let client = null;
 
-    <script>
-        // 1. Setup Variables
-        const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf'; 
-        const CHANNEL = 'bigloubeats81';
-        const REDIRECT_URI = 'https://bigloubeats.github.io/boomieVS/index.html';
-        let client = null;
+    // 2. Define Send Function GLOBALLY early
+    window.send = function (cmd) {
+      const status = document.getElementById('status');
+      if (!client || client.readyState() !== 'OPEN') {
+        alert(
+          'Connection not ready. Status: ' +
+            (client ? client.readyState() : 'No Client')
+        );
+        return;
+      }
+      client
+        .say(CHANNEL, cmd)
+        .then(() => {
+          status.innerText = 'SENT: ' + cmd;
+          status.style.color = '#4ade80';
+        })
+        .catch((e) => {
+          status.innerText = 'SEND ERROR';
+          console.error(e);
+        });
+    };
 
-        // 2. Define Send Function GLOBALLY early
-        window.send = function(cmd) {
-            const status = document.getElementById('status');
-            if (!client || client.readyState() !== "OPEN") {
-                alert("Connection not ready. Status: " + (client ? client.readyState() : "No Client"));
-                return;
-            }
-            client.say(CHANNEL, cmd).then(() => {
-                status.innerText = "SENT: " + cmd;
-                status.style.color = "#4ade80";
-            }).catch(e => {
-                status.innerText = "SEND ERROR";
-                console.error(e);
+    // Separate function for login
+    function login() {
+      const scope = encodeURIComponent('chat:edit chat:read');
+      // Make sure the "Allowed Redirect URLs" in your Twitch app includes REDIRECT_URI exactly.
+      window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
+        REDIRECT_URI
+      )}&response_type=token&scope=${scope}`;
+    }
+
+    // Wait until DOM is ready, then set up event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      // Hook up the login button
+      document.getElementById('login-btn').addEventListener('click', login);
+
+      // Hook up the host buttons
+      document.getElementById('start').addEventListener('click', () =>
+        window.send('!startgame')
+      );
+      document.getElementById('catch').addEventListener('click', () =>
+        window.send('!hostcatch')
+      );
+      document.getElementById('drop').addEventListener('click', () =>
+        window.send('!hostdrop')
+      );
+      document.getElementById('minus').addEventListener('click', () =>
+        window.send('!hostminus')
+      );
+
+      // 3. Handle Login & Connection
+      const params = new URLSearchParams(window.location.hash.replace('#', '?'));
+      const token = params.get('access_token');
+
+      if (token) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-interface').style.display = 'flex';
+
+        // Load Chat Iframe
+        document.getElementById('chat-target').innerHTML = `
+          <iframe
+            src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=bigloubeats.github.io&darkpopout"
+            height="100%"
+            width="100%"
+            allow="storage-access"
+          ></iframe>`;
+
+        // Initialize TMI client
+        const initTMI = () => {
+          if (typeof tmi === 'undefined') {
+            setTimeout(initTMI, 100);
+            return;
+          }
+
+          client = new tmi.Client({
+            connection: { reconnect: true, secure: true },
+            identity: { username: CHANNEL, password: \`oauth:\${token}\` },
+            channels: [CHANNEL],
+          });
+
+          client
+            .connect()
+            .then(() => {
+              document.getElementById('status').innerText =
+                'READY AS ' + CHANNEL.toUpperCase();
+            })
+            .catch((e) => {
+              document.getElementById('status').innerText =
+                'CONNECTION FAILED';
+              console.error(e);
             });
         };
 
-        // Separate function for login
-        function login() {
-            const scope = encodeURIComponent('chat:edit chat:read');
-            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scope}`;
-        }
-
-        // Wait until DOM is ready, then set up event listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            // Hook up the login button
-            document.getElementById('login-btn').addEventListener('click', login);
-
-            // Hook up the host buttons
-            document.getElementById('start').addEventListener('click', () => window.send('!startgame'));
-            document.getElementById('catch').addEventListener('click', () => window.send('!hostcatch'));
-            document.getElementById('drop').addEventListener('click', () => window.send('!hostdrop'));
-            document.getElementById('minus').addEventListener('click', () => window.send('!hostminus'));
-
-            // 3. Handle Login & Connection
-            const params = new URLSearchParams(window.location.hash.replace('#', '?'));
-            const token = params.get('access_token');
-
-            if (token) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('main-interface').style.display = 'flex';
-
-                // Load Chat Iframe
-                document.getElementById('chat-target').innerHTML = `
-                    <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=bigloubeats.github.io&darkpopout" 
-                    height="100%" width="100%" allow="storage-access"></iframe>`;
-
-                // Initialize TMI client
-                const initTMI = () => {
-                    if (typeof tmi === 'undefined') {
-                        setTimeout(initTMI, 100);
-                        return;
-                    }
-                    
-                    client = new tmi.Client({
-                        connection: { reconnect: true, secure: true },
-                        identity: { username: CHANNEL, password: \`oauth:\${token}\` },
-                        channels: [ CHANNEL ]
-                    });
-
-                    client.connect().then(() => {
-                        document.getElementById('status').innerText = "READY AS " + CHANNEL.toUpperCase();
-                    }).catch(e => {
-                        document.getElementById('status').innerText = "CONNECTION FAILED";
-                        console.error(e);
-                    });
-                };
-
-                initTMI();
-            }
-        });
-    </script>
+        initTMI();
+      }
+    });
+  </script>
 </body>
 </html>
