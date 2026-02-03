@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,7 +8,8 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
   <title>boomieVS - Host</title>
-  <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/1/tmi.min.js"></script>
+  <!-- Replace the incorrect /1/ path with dist/tmi.min.js -->
+  <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/dist/tmi.min.js"></script>
   <style>
     :root {
       --twitch-purple: #9147ff;
@@ -131,7 +133,6 @@
 
   <script>
     // 1. Setup Variables
-    // Make sure your Twitch Developer Console also uses the exact same redirect URL
     const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf';
     const CHANNEL = 'bigloubeats81';
     const REDIRECT_URI = 'https://bigloubeats.github.io/boomieVS/index.html';
@@ -162,7 +163,6 @@
     // Separate function for login
     function login() {
       const scope = encodeURIComponent('chat:edit chat:read');
-      // Make sure the "Allowed Redirect URLs" in your Twitch app includes REDIRECT_URI exactly.
       window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
         REDIRECT_URI
       )}&response_type=token&scope=${scope}`;
@@ -224,8 +224,7 @@
                 'READY AS ' + CHANNEL.toUpperCase();
             })
             .catch((e) => {
-              document.getElementById('status').innerText =
-                'CONNECTION FAILED';
+              document.getElementById('status').innerText = 'CONNECTION FAILED';
               console.error(e);
             });
         };
@@ -236,3 +235,4 @@
   </script>
 </body>
 </html>
+```
