@@ -51,38 +51,33 @@
         const CHANNEL = 'bigloubeats81';
         const OAUTH_TOKEN = 'oauth:12u1pbhgvupaayd6pqu5kfprrfb23m'; 
 
-        // 1. Initialize Client Immediately
-        const client = new tmi.Client({
-            connection: { secure: true, reconnect: true },
-            identity: { username: CHANNEL, password: OAUTH_TOKEN },
-            channels: [ CHANNEL ]
-        });
+       const statusEl = document.getElementById('status');
+    
+    const client = new tmi.Client({
+        connection: { reconnect: true, secure: true },
+        identity: { username: CHANNEL, password: OAUTH_TOKEN },
+        channels: [ CHANNEL ]
+    });
 
-        // 2. Global Send Function
-        window.send = function(command) {
-            if (client.readyState() !== "OPEN") {
-                console.log("Current state:", client.readyState());
-                return;
-            }
-            client.say(CHANNEL, command)
-                .then(() => {
-                    document.getElementById('status').innerText = "Command Sent!";
-                    setTimeout(() => { document.getElementById('status').innerText = "Connected"; }, 1500);
-                })
-                .catch(err => {
-                    console.error("Send Error:", err);
-                    document.getElementById('status').innerText = "Send Failed!";
-                });
-        };
+    window.send = function(command) {
+        if (client.readyState() !== "OPEN") {
+            statusEl.innerText = "State: " + client.readyState();
+            return;
+        }
+        client.say(CHANNEL, command);
+    };
 
-        // 3. Connect and Update Status
-        client.connect().then(() => {
-            document.getElementById('status').innerText = "Connected to @bigloubeats81";
-            document.getElementById('status').style.color = "#4ade80";
-        }).catch(err => {
-            document.getElementById('status').innerText = "Auth Failed - Check Token";
-            console.error("Connection Error:", err);
-        });
-    </script>
+    // DEBUGGING LOGS ON SCREEN
+    client.on('log', ({level, message}) => {
+        if(level === 'error' || level === 'warn') {
+            statusEl.innerText = "Log: " + message;
+        }
+    });
+
+    client.connect()
+        .then(() => { statusEl.innerText = "CONNECTED"; statusEl.style.color = "#4ade80"; })
+        .catch(err => { statusEl.innerText = "ERR: " + JSON.stringify(err); });
+</script>
 </body>
 </html>
+
