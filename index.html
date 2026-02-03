@@ -3,83 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Host Deck - Stacked</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tmi.js/1.8.5/tmi.min.js"></script>
+    <title>BigLou Host Deck</title>
+    <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/1/tmi.min.js"></script>
     <style>
         :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
-        
         * { box-sizing: border-box; touch-action: manipulation; }
-
-        body { 
-            background: var(--bg); 
-            color: white; 
-            font-family: sans-serif;
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            width: 100vw;
-            overflow: hidden; 
-        }
-
-        /* 1. CHAT AT THE TOP AND CENTER */
-        .chat-container { 
-            flex: 1; /* Takes up all available space */
-            width: 100%;
-            background: #000;
-            display: flex;
-            justify-content: center;
-        }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
         
-        iframe { 
-            width: 100%; 
-            height: 100%; 
-            border: none; 
-            max-width: 600px; /* Keeps chat from getting too wide on tablets */
-        }
+        .chat-container { flex: 1; width: 100%; background: #000; border-bottom: 2px solid #333; }
+        iframe { width: 100%; height: 100%; border: none; }
 
-        /* 2. BUTTONS DIRECTLY BELOW */
-        .controls-section {
-            background: #18181b;
-            padding: 15px;
-            border-top: 2px solid var(--twitch-purple);
-        }
-
-        .button-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 12px; 
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .btn { 
-            height: 70px; 
-            font-size: 1rem; 
-            font-weight: bold; 
-            border: none; 
-            border-radius: 8px; 
-            color: white; 
-            background: #26262c; 
-            box-shadow: 0 4px 0 #000;
-            transition: all 0.1s;
-        }
-
+        .controls { background: #18181b; padding: 15px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { height: 65px; font-weight: bold; border: none; border-radius: 8px; color: white; background: #26262c; box-shadow: 0 4px 0 #000; font-size: 0.9rem; }
         .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
-
-        /* Button Colors */
+        
         #start { border-bottom: 4px solid #4ade80; }
         #catch { border-bottom: 4px solid #60a5fa; }
         #drop  { border-bottom: 4px solid #f87171; }
         #minus { border-bottom: 4px solid #fbbf24; }
-
-        #status { 
-            text-align: center; 
-            font-size: 0.75rem; 
-            color: #888; 
-            margin-top: 10px; 
-            text-transform: uppercase;
-        }
+        #status { text-align: center; font-size: 0.7rem; color: #888; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -87,54 +30,59 @@
     <div class="chat-container">
         <iframe 
             src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io&darkpopout" 
+            allow="autoplay; fullscreen"
+            sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-forms"
             height="100%" 
             width="100%">
         </iframe>
     </div>
 
-    <div class="controls-section">
-        <div class="button-grid">
+    <div class="controls">
+        <div class="grid">
             <button id="start" class="btn" onclick="send('!startgame')">START GAME</button>
-            <button id="catch" class="btn" onclick="send('!hostcatch')">CATCH</button>
-            <button id="drop"  class="btn" onclick="send('!hostdrop')">DROP</button>
-            <button id="minus" class="btn" onclick="send('!hostminus')">MINUS</button>
+            <button id="catch" class="btn" onclick="send('!hostcatch')">HOST CATCH</button>
+            <button id="drop"  class="btn" onclick="send('!hostdrop')">HOST DROP</button>
+            <button id="minus" class="btn" onclick="send('!hostminus')">HOST MINUS</button>
         </div>
-        <div id="status">Connecting...</div>
+        <div id="status">Connecting to Twitch...</div>
     </div>
 
     <script>
         const CHANNEL = 'bigloubeats81';
         const OAUTH_TOKEN = 'oauth:12u1pbhgvupaayd6pqu5kfprrfb23m'; 
 
-       let client;
-
-    // We define this OUTSIDE of window.onload so it's available immediately
-    window.send = function(command) {
-        if (!client || client.readyState() !== "OPEN") {
-            alert("Still connecting to Twitch... please wait.");
-            return;
-        }
-        client.say(CHANNEL, command)
-            .then(() => {
-                document.getElementById('status').innerText = "Sent: " + command;
-            })
-            .catch(err => console.error(err));
-    };
-
-    window.onload = function() {
-        client = new tmi.Client({
+        // 1. Initialize Client Immediately
+        const client = new tmi.Client({
+            connection: { secure: true, reconnect: true },
             identity: { username: CHANNEL, password: OAUTH_TOKEN },
             channels: [ CHANNEL ]
         });
 
+        // 2. Global Send Function
+        window.send = function(command) {
+            if (client.readyState() !== "OPEN") {
+                console.log("Current state:", client.readyState());
+                return;
+            }
+            client.say(CHANNEL, command)
+                .then(() => {
+                    document.getElementById('status').innerText = "Command Sent!";
+                    setTimeout(() => { document.getElementById('status').innerText = "Connected"; }, 1500);
+                })
+                .catch(err => {
+                    console.error("Send Error:", err);
+                    document.getElementById('status').innerText = "Send Failed!";
+                });
+        };
+
+        // 3. Connect and Update Status
         client.connect().then(() => {
-            document.getElementById('status').innerText = "Connected";
+            document.getElementById('status').innerText = "Connected to @bigloubeats81";
             document.getElementById('status').style.color = "#4ade80";
         }).catch(err => {
-            document.getElementById('status').innerText = "Auth Error";
+            document.getElementById('status').innerText = "Auth Failed - Check Token";
+            console.error("Connection Error:", err);
         });
-    };
-</script>
+    </script>
 </body>
 </html>
-
