@@ -58,19 +58,24 @@
     </div>
 
     <script>
-// 1. Define variables in the global scope immediately
+// 1. Global Setup
 let client = null;
 const CHANNEL = 'bigloubeats81';
 const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf';
 const REDIRECT_URI = 'https://bigloubeats.github.io/boomieVS/index.html';
 
-// 2. Define the send function IMMEDIATELY so buttons always find it
+// 2. The Send Function (Now more aggressive)
 window.send = function(cmd) {
     const status = document.getElementById('status');
     
-    if (!client || client.readyState() !== "OPEN") {
-        status.innerText = "NOT CONNECTED YET...";
-        status.style.color = "#fbbf24";
+    if (!client) {
+        status.innerText = "CLIENT NOT INITIALIZED";
+        return;
+    }
+    
+    if (client.readyState() !== "OPEN") {
+        status.innerText = "CONNECTING... TRY AGAIN IN 2 SECS";
+        client.connect().catch(e => console.error("Reconnect failed:", e));
         return;
     }
 
@@ -81,55 +86,59 @@ window.send = function(cmd) {
             if (navigator.vibrate) navigator.vibrate(50); 
         })
         .catch(err => {
-            status.innerText = "ERROR: " + err;
+            status.innerText = "CHAT ERROR: " + err;
             status.style.color = "#f87171";
         });
 };
 
-// 3. Login logic
 function login() {
     const scope = encodeURIComponent('chat:edit chat:read');
     window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scope}`;
 }
 
-// 4. Token handling
-const hash = window.location.hash.substring(1);
-const params = new URLSearchParams(hash);
-const token = params.get('access_token');
+// 3. Token & Connection Logic
+// We use window.onload to ensure everything is ready before we try to connect
+window.onload = function() {
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const token = params.get('access_token');
 
-if (token) {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('main-interface').style.display = 'flex';
+    if (token) {
+        console.log("Token found, initializing...");
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-interface').style.display = 'flex';
 
-    // Load Chat
-    document.getElementById('chat-target').innerHTML = `
-        <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=bigloubeats.github.io&darkpopout" 
-        height="100%" width="100%"></iframe>`;
+        document.getElementById('chat-target').innerHTML = `
+            <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=bigloubeats.github.io&darkpopout" 
+            height="100%" width="100%"></iframe>`;
 
-    // Initialize TMI Client
-    client = new tmi.Client({
-        options: { debug: false },
-        connection: { reconnect: true, secure: true },
-        identity: {
-            username: CHANNEL, 
-            password: `oauth:${token}`
-        },
-        channels: [ CHANNEL ]
-    });
-
-    client.connect()
-        .then(() => {
-            document.getElementById('status').innerText = "READY AS " + CHANNEL.toUpperCase();
-            document.getElementById('status').style.color = "#4ade80";
-        })
-        .catch(e => {
-            document.getElementById('status').innerText = "AUTH FAILED";
-            document.getElementById('status').style.color = "#f87171";
+        client = new tmi.Client({
+            options: { debug: true }, // Turned debug back on to see connection logs
+            connection: { reconnect: true, secure: true },
+            identity: {
+                username: CHANNEL, 
+                password: `oauth:${token}`
+            },
+            channels: [ CHANNEL ]
         });
-}
+
+        client.connect()
+            .then(() => {
+                document.getElementById('status').innerText = "CONNECTED AS " + CHANNEL.toUpperCase();
+                document.getElementById('status').style.color = "#4ade80";
+            })
+            .catch(e => {
+                document.getElementById('status').innerText = "CONNECTION FAILED: " + e;
+                document.getElementById('status').style.color = "#f87171";
+            });
+    } else {
+        console.log("No token found in URL.");
+    }
+};
     </script>
 </body>
 </html>
+
 
 
 
