@@ -58,24 +58,19 @@
     </div>
 
     <script>
-// 1. Setup Global Variables
+// 1. Setup Global State
 let client = null;
 const CHANNEL = 'bigloubeats81';
 const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf';
 const REDIRECT_URI = 'https://bigloubeats.github.io/boomieVS/index.html';
 
-// 2. Define Send Immediately
+// 2. Define Send (Safe from ReferenceErrors)
 window.send = function(cmd) {
     const status = document.getElementById('status');
     
-    if (!client) {
-        status.innerText = "ERROR: LOG IN AGAIN";
+    if (!client || client.readyState() !== "OPEN") {
+        status.innerText = "NOT CONNECTED. TRY LOGGING IN AGAIN.";
         status.style.color = "#f87171";
-        return;
-    }
-    
-    if (client.readyState() !== "OPEN") {
-        status.innerText = "CONNECTING... PLEASE WAIT";
         return;
     }
 
@@ -86,38 +81,47 @@ window.send = function(cmd) {
             if (navigator.vibrate) navigator.vibrate(50); 
         })
         .catch(err => {
-            status.innerText = "CHAT ERROR: " + err;
-            console.error(err);
+            status.innerText = "SEND ERROR: " + err;
         });
 };
 
 function login() {
     const scope = encodeURIComponent('chat:edit chat:read');
-    window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scope}`;
+    const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scope}`;
+    window.location.href = authUrl;
 }
 
-// 3. Robust Token Detection & Initialization
-function init() {
-    // Look for token in both hash and search params
-    const urlParams = new URLSearchParams(window.location.hash.replace("#", "?") || window.location.search);
-    const token = urlParams.get('access_token');
+// 3. The Logic to "Catch" the token and start TMI
+function startApp() {
+    const status = document.getElementById('status');
+    
+    // Attempt to find token in the URL hash
+    const hash = window.location.hash;
+    if (!hash || !hash.includes('access_token=')) {
+        console.log("No token found in URL yet.");
+        status.innerText = "WAITING FOR LOGIN...";
+        return;
+    }
+
+    // Manual parsing of the token (more reliable than URLSearchParams for hashes)
+    const token = hash.split('access_token=')[1].split('&')[0];
 
     if (token) {
-        console.log("Token detected!");
+        console.log("Token captured!");
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('main-interface').style.display = 'flex';
-        document.getElementById('status').innerText = "CONNECTING TO TWITCH...";
+        status.innerText = "CONNECTING...";
 
-        // Embed Chat
+        // Load Chat
         document.getElementById('chat-target').innerHTML = `
             <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=bigloubeats.github.io&darkpopout" 
             height="100%" width="100%"></iframe>`;
 
-        // Create TMI Client
+        // Create the TMI Client
         client = new tmi.Client({
             connection: { reconnect: true, secure: true },
             identity: {
-                username: CHANNEL, 
+                username: CHANNEL, // NOTE: Must be the account you logged in with!
                 password: `oauth:${token}`
             },
             channels: [ CHANNEL ]
@@ -125,24 +129,26 @@ function init() {
 
         client.connect()
             .then(() => {
-                document.getElementById('status').innerText = "CONNECTED AS " + CHANNEL.toUpperCase();
-                document.getElementById('status').style.color = "#4ade80";
+                status.innerText = "CONNECTED AS " + CHANNEL.toUpperCase();
+                status.style.color = "#4ade80";
             })
             .catch(e => {
-                document.getElementById('status').innerText = "AUTH FAILED: " + e;
-                document.getElementById('status').style.color = "#f87171";
+                status.innerText = "CONNECTION ERROR: " + e;
+                console.error(e);
             });
-    } else {
-        console.log("Waiting for login...");
-        document.getElementById('status').innerText = "NOT LOGGED IN";
     }
 }
 
-// Run init on load
-window.addEventListener('load', init);
+// Run as soon as the DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startApp);
+} else {
+    startApp();
+}
     </script>
 </body>
 </html>
+
 
 
 
