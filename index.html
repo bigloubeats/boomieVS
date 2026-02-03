@@ -2,42 +2,91 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BigLouBeats81 - Host Deck</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Host Deck - Mobile</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tmi.js/1.8.5/tmi.min.js"></script>
     <style>
-        :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        :root { --twitch-purple: #9147ff; --bg: #0e0e10; --card-bg: #18181b; }
         
-        /* Left Side: Buttons */
-        .controls { width: 350px; display: grid; grid-template-columns: 1fr; gap: 15px; padding: 20px; align-content: start; border-right: 2px solid #222; z-index: 10; }
-        h1 { font-size: 1.1rem; text-align: center; color: var(--twitch-purple); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-        .btn { height: 70px; font-size: 1rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; background: #26262c; transition: all 0.2s; border-bottom: 4px solid #000; }
-        .btn:hover { background: #323239; transform: translateY(-2px); }
-        .btn:active { transform: translateY(2px); border-bottom: 0; }
-        
-        /* Command Colors */
-        #start { border-left: 8px solid #4ade80; } 
-        #catch { border-left: 8px solid #60a5fa; } 
-        #drop  { border-left: 8px solid #f87171; } 
-        #minus { border-left: 8px solid #fbbf24; }
+        * { box-sizing: border-box; touch-action: manipulation; }
 
-        /* Right Side: Chat */
-        .chat-container { flex-grow: 1; background: #000; position: relative; }
-        iframe { width: 100%; height: 100%; border: none; }
+        body { 
+            background: var(--bg); 
+            color: white; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            width: 100vw;
+            overflow: hidden; 
+        }
+
+        /* Top Section: Header & Status */
+        header {
+            padding: 10px;
+            background: var(--card-bg);
+            border-bottom: 1px solid #333;
+            text-align: center;
+        }
+        h1 { font-size: 0.9rem; margin: 0; color: var(--twitch-purple); text-transform: uppercase; }
+        #status { font-size: 0.7rem; color: #666; margin-top: 4px; }
+
+        /* Middle Section: Big Buttons */
+        .button-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px; 
+            padding: 10px;
+            background: var(--bg);
+        }
+
+        .btn { 
+            height: 80px; 
+            font-size: 1rem; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 12px; 
+            color: white; 
+            background: #26262c; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            box-shadow: 0 4px 0 #000;
+            transition: all 0.1s;
+        }
+
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
+
+        /* Button Border Accents */
+        #start { border-top: 5px solid #4ade80; }
+        #catch { border-top: 5px solid #60a5fa; }
+        #drop  { border-top: 5px solid #f87171; }
+        #minus { border-top: 5px solid #fbbf24; }
+
+        /* Bottom Section: Chat (Scrollable) */
+        .chat-container { 
+            flex-grow: 1; 
+            background: #000;
+            position: relative;
+            border-top: 1px solid #333;
+        }
         
-        #status { font-size: 0.8rem; color: #666; text-align: center; margin-top: 10px; font-family: monospace; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
 
-    <div class="controls">
-        <h1>Host Deck</h1>
-        <button id="start" class="btn" onclick="send('!startgame')">START GAME</button>
-        <button id="catch" class="btn" onclick="send('!hostcatch')">HOST CATCH</button>
-        <button id="drop"  class="btn" onclick="send('!hostdrop')">HOST DROP</button>
-        <button id="minus" class="btn" onclick="send('!hostminus')">HOST MINUS</button>
-        <div id="status">Initializing...</div>
+    <header>
+        <h1>BigLouBeats81 Deck</h1>
+        <div id="status">Connecting...</div>
+    </header>
+
+    <div class="button-grid">
+        <button id="start" class="btn" onclick="send('!startgame')">START</button>
+        <button id="catch" class="btn" onclick="send('!hostcatch')">CATCH</button>
+        <button id="drop"  class="btn" onclick="send('!hostdrop')">DROP</button>
+        <button id="minus" class="btn" onclick="send('!hostminus')">MINUS</button>
     </div>
 
     <div class="chat-container">
@@ -49,55 +98,39 @@
     </div>
 
     <script>
-        // CONFIGURATION
         const CHANNEL = 'bigloubeats81';
-        // Replace this with your token from twitchtokengenerator.com
-        const OAUTH_TOKEN = 'oauth:12u1pbhgvupaayd6pqu5kfprrfb23m';
+        const OAUTH_TOKEN = 'oauth:12u1pbhgvupaayd6pqu5kfprrfb23m'; // <--- PASTE TOKEN HERE
 
         let client;
 
         window.onload = function() {
             const statusEl = document.getElementById('status');
 
-            // 1. Initialize TMI Client
             client = new tmi.Client({
-                identity: {
-                    username: CHANNEL,
-                    password: OAUTH_TOKEN
-                },
+                identity: { username: CHANNEL, password: OAUTH_TOKEN },
                 channels: [ CHANNEL ]
             });
 
-            // 2. Define Send Function
             window.send = function(command) {
-                if (!client || client.readyState() !== "OPEN") {
-                    console.error("Not connected to chat.");
-                    statusEl.innerText = "Error: Not Connected";
-                    return;
-                }
+                if (client.readyState() !== "OPEN") return;
+                client.say(CHANNEL, command).catch(console.error);
                 
-                client.say(CHANNEL, command)
-                    .then(() => {
-                        console.log("Sent: " + command);
-                        statusEl.innerText = "Sent: " + command;
-                        setTimeout(() => { statusEl.innerText = "Connected"; }, 2000);
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        statusEl.innerText = "Send Failed";
-                    });
+                // Haptic feedback simulation (Visual)
+                statusEl.innerText = "Sent: " + command;
+                statusEl.style.color = "#4ade80";
+                setTimeout(() => { 
+                    statusEl.innerText = "Connected"; 
+                    statusEl.style.color = "#666";
+                }, 1500);
             };
 
-            // 3. Connect to Twitch
             client.connect()
                 .then(() => {
-                    statusEl.innerText = "Connected to @bigloubeats81";
-                    statusEl.style.color = "#4ade80";
+                    statusEl.innerText = "Connected";
                 })
                 .catch(err => {
-                    statusEl.innerText = "Login Failed - Check Token";
+                    statusEl.innerText = "Auth Failed";
                     statusEl.style.color = "#f87171";
-                    console.error(err);
                 });
         };
     </script>
