@@ -3,51 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BigLou Host Deck</title>
+    <title>Host Deck - boomieVS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tmi.js/1.8.5/tmi.min.js"></script>
     <style>
         :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
         * { box-sizing: border-box; touch-action: manipulation; }
-        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
-        
-        /* LOGIN SCREEN */
-        #login-screen { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: var(--bg); display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; z-index: 1000; 
-        }
-
-        /* MAIN INTERFACE (Hidden until login) */
-        #main-interface { display: none; flex-direction: column; height: 100%; width: 100%; }
-
-        .chat-container { flex: 1; width: 100%; background: #000; border-bottom: 2px solid #333; }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        #main-interface { display: none; flex-direction: column; height: 100%; }
+        .chat-container { flex: 1; background: #000; border-bottom: 2px solid #333; }
         iframe { width: 100%; height: 100%; border: none; }
-
         .controls { background: #18181b; padding: 15px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px; margin: 0 auto; }
-        
-        .btn { 
-            height: 65px; font-weight: bold; border: none; border-radius: 8px; 
-            color: white; background: #26262c; box-shadow: 0 4px 0 #000; font-size: 0.9rem; 
-            cursor: pointer;
-        }
+        .btn { height: 65px; font-weight: bold; border: none; border-radius: 8px; color: white; background: #26262c; box-shadow: 0 4px 0 #000; font-size: 0.9rem; cursor: pointer; }
         .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
-        
-        .login-btn { background: var(--twitch-purple) !important; padding: 0 30px; margin-top: 20px; }
-        
+        .login-btn { background: var(--twitch-purple) !important; padding: 0 40px; }
+        #status { text-align: center; font-size: 0.75rem; color: #888; margin-top: 10px; }
         #start { border-bottom: 4px solid #4ade80; }
         #catch { border-bottom: 4px solid #60a5fa; }
         #drop  { border-bottom: 4px solid #f87171; }
         #minus { border-bottom: 4px solid #fbbf24; }
-        #status { text-align: center; font-size: 0.75rem; color: #888; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
-        <h1 style="color: var(--twitch-purple); margin: 0;">BigLou Host Deck</h1>
-        <p style="color: #888; margin-bottom: 10px;">Authorization Required</p>
-        <button onclick="login()" class="btn login-btn">CONNECT WITH TWITCH</button>
+        <h1 style="color: var(--twitch-purple)">boomieVS Host</h1>
+        <button onclick="login()" class="btn login-btn">CONNECT TWITCH</button>
+        <p id="debug-url" style="font-size: 10px; color: #444; margin-top: 20px;"></p>
     </div>
 
     <div id="main-interface">
@@ -64,42 +47,45 @@
     </div>
 
     <script>
-        const CLIENT_ID = 'u6mdxwgsduh7wdp0s0ifxlpnu9q76z'; 
+        // REPLACE THIS WITH YOUR CLIENT ID FROM TWITCH CONSOLE
+        const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf'; 
         const CHANNEL = 'bigloubeats81';
+
+        // This automatically matches your GitHub Pages URL
         const REDIRECT_URI = window.location.origin + window.location.pathname;
+        document.getElementById('debug-url').innerText = "Redirecting to: " + REDIRECT_URI;
 
         function login() {
             const scope = encodeURIComponent('chat:edit chat:read');
-            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=token&scope=${scope}`;
+            // We use encodeURIComponent on the REDIRECT_URI to ensure Twitch accepts it
+            const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scope}`;
+            window.location.href = authUrl;
         }
 
-        // Parse token from URL
         const hash = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
         const token = params.get('access_token');
 
         if (token) {
-            // Switch Screens
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('main-interface').style.display = 'flex';
-
-            // Load Chat
+            
             document.getElementById('chat-target').innerHTML = `
                 <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=${window.location.hostname}&darkpopout" 
                 height="100%" width="100%" allow="autoplay; fullscreen" 
                 sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-forms"></iframe>`;
 
-            // Setup TMI
             const client = new tmi.Client({
                 connection: { reconnect: true, secure: true },
                 identity: { username: CHANNEL, password: `oauth:${token}` },
                 channels: [ CHANNEL ]
             });
 
-            window.send = function(cmd) {
+            window.send = (cmd) => {
                 if (client.readyState() !== "OPEN") return;
                 client.say(CHANNEL, cmd);
                 document.getElementById('status').innerText = "Sent: " + cmd;
+                setTimeout(() => { document.getElementById('status').innerText = "CONNECTED"; }, 1000);
             };
 
             client.connect().then(() => {
@@ -110,4 +96,3 @@
     </script>
 </body>
 </html>
-
