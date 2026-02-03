@@ -58,15 +58,23 @@
     </div>
 
     <script>
-        const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf'; 
+const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf'; 
 const CHANNEL = 'bigloubeats81';
 const REDIRECT_URI = 'https://bigloubeats.github.io/boomieVS/index.html';
+
+// 1. Define send globally IMMEDIATELY so buttons don't crash
+window.send = function(cmd) {
+    console.log("Button pressed, but not connected yet: " + cmd);
+    const status = document.getElementById('status');
+    if (status) status.innerText = "NOT LOGGED IN";
+};
 
 function login() {
     const scope = encodeURIComponent('chat:edit chat:read');
     window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scope}`;
 }
 
+// 2. Extract token from URL
 const hash = window.location.hash.substring(1);
 const params = new URLSearchParams(hash);
 const token = params.get('access_token');
@@ -75,31 +83,28 @@ if (token) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-interface').style.display = 'flex';
 
-    // Load Chat
+    // Load Chat Embed
     document.getElementById('chat-target').innerHTML = `
         <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=bigloubeats.github.io&darkpopout" 
         height="100%" width="100%"></iframe>`;
 
-    // Initialize TMI with the specific token
-    // Note: We don't strictly need username if the token is valid for the channel
+    // Initialize TMI
     const client = new tmi.Client({
-        options: { debug: true },
+        options: { debug: false },
         connection: { reconnect: true, secure: true },
         identity: {
-            username: CHANNEL, // Ensure this is the username of the account that owns the token
+            username: CHANNEL, 
             password: `oauth:${token}`
         },
         channels: [ CHANNEL ]
     });
 
-    // Defining send on window immediately
+    // 3. Redefine send once the client is initialized
     window.send = function(cmd) {
         const status = document.getElementById('status');
         
-        // Check if client exists and is connected
-        if (!client || client.readyState() !== "OPEN") {
-            status.innerText = "NOT CONNECTED. RECONNECTING...";
-            client.connect().catch(console.error);
+        if (client.readyState() !== "OPEN") {
+            status.innerText = "WAITING FOR CONNECTION...";
             return;
         }
 
@@ -110,7 +115,6 @@ if (token) {
                 if (navigator.vibrate) navigator.vibrate(50); 
             })
             .catch(err => {
-                console.error(err);
                 status.innerText = "ERROR: " + err;
                 status.style.color = "#f87171";
             });
@@ -118,15 +122,14 @@ if (token) {
 
     client.connect()
         .then(() => {
-            document.getElementById('status').innerText = "CONNECTED TO #" + CHANNEL.toUpperCase();
-            document.getElementById('status').style.color = "#4ade80";
+            document.getElementById('status').innerText = "READY AS " + CHANNEL.toUpperCase();
         })
         .catch(e => {
-            document.getElementById('status').innerText = "CONNECTION FAILED: " + e;
-            document.getElementById('status').style.color = "#f87171";
+            document.getElementById('status').innerText = "AUTH FAILED";
         });
 }
     </script>
 </body>
 </html>
+
 
