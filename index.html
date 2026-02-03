@@ -58,24 +58,24 @@
     </div>
 
     <script>
-// 1. Global Setup
+// 1. Setup Global Variables
 let client = null;
 const CHANNEL = 'bigloubeats81';
 const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf';
 const REDIRECT_URI = 'https://bigloubeats.github.io/boomieVS/index.html';
 
-// 2. The Send Function (Now more aggressive)
+// 2. Define Send Immediately
 window.send = function(cmd) {
     const status = document.getElementById('status');
     
     if (!client) {
-        status.innerText = "CLIENT NOT INITIALIZED";
+        status.innerText = "ERROR: LOG IN AGAIN";
+        status.style.color = "#f87171";
         return;
     }
     
     if (client.readyState() !== "OPEN") {
-        status.innerText = "CONNECTING... TRY AGAIN IN 2 SECS";
-        client.connect().catch(e => console.error("Reconnect failed:", e));
+        status.innerText = "CONNECTING... PLEASE WAIT";
         return;
     }
 
@@ -87,7 +87,7 @@ window.send = function(cmd) {
         })
         .catch(err => {
             status.innerText = "CHAT ERROR: " + err;
-            status.style.color = "#f87171";
+            console.error(err);
         });
 };
 
@@ -96,24 +96,25 @@ function login() {
     window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scope}`;
 }
 
-// 3. Token & Connection Logic
-// We use window.onload to ensure everything is ready before we try to connect
-window.onload = function() {
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const token = params.get('access_token');
+// 3. Robust Token Detection & Initialization
+function init() {
+    // Look for token in both hash and search params
+    const urlParams = new URLSearchParams(window.location.hash.replace("#", "?") || window.location.search);
+    const token = urlParams.get('access_token');
 
     if (token) {
-        console.log("Token found, initializing...");
+        console.log("Token detected!");
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('main-interface').style.display = 'flex';
+        document.getElementById('status').innerText = "CONNECTING TO TWITCH...";
 
+        // Embed Chat
         document.getElementById('chat-target').innerHTML = `
             <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=bigloubeats.github.io&darkpopout" 
             height="100%" width="100%"></iframe>`;
 
+        // Create TMI Client
         client = new tmi.Client({
-            options: { debug: true }, // Turned debug back on to see connection logs
             connection: { reconnect: true, secure: true },
             identity: {
                 username: CHANNEL, 
@@ -128,16 +129,21 @@ window.onload = function() {
                 document.getElementById('status').style.color = "#4ade80";
             })
             .catch(e => {
-                document.getElementById('status').innerText = "CONNECTION FAILED: " + e;
+                document.getElementById('status').innerText = "AUTH FAILED: " + e;
                 document.getElementById('status').style.color = "#f87171";
             });
     } else {
-        console.log("No token found in URL.");
+        console.log("Waiting for login...");
+        document.getElementById('status').innerText = "NOT LOGGED IN";
     }
-};
+}
+
+// Run init on load
+window.addEventListener('load', init);
     </script>
 </body>
 </html>
+
 
 
 
