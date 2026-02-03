@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BigLou Host Deck</title>
-    <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/1/tmi.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tmi.js/1.8.5/tmi.min.js"></script>
     <style>
         :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
         * { box-sizing: border-box; touch-action: manipulation; }
         body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
         
-        .chat-container { flex: 1; width: 100%; background: #000; border-bottom: 2px solid #333; }
-        iframe { width: 100%; height: 100%; border: none; }
+        .chat-container { flex: 1; width: 100%; background: #000; border-bottom: 2px solid #333; display: flex; justify-content: center;}
+        iframe { width: 100%; height: 100%; border: none; max-width: 800px; }
 
         .controls { background: #18181b; padding: 15px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px; margin: 0 auto; }
         .btn { height: 65px; font-weight: bold; border: none; border-radius: 8px; color: white; background: #26262c; box-shadow: 0 4px 0 #000; font-size: 0.9rem; }
         .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
         
@@ -22,62 +22,81 @@
         #catch { border-bottom: 4px solid #60a5fa; }
         #drop  { border-bottom: 4px solid #f87171; }
         #minus { border-bottom: 4px solid #fbbf24; }
-        #status { text-align: center; font-size: 0.7rem; color: #888; margin-top: 10px; }
+        
+        .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        #status { text-align: center; font-size: 0.75rem; color: #888; margin-top: 10px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="chat-container">
-        <iframe 
-            src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io&darkpopout" 
-            allow="autoplay; fullscreen"
-            sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-forms"
-            height="100%" 
-            width="100%">
-        </iframe>
+    <div id="login-screen" class="login-overlay">
+        <h1 style="color: var(--twitch-purple)">BigLou Host Deck</h1>
+        <button onclick="login()" class="btn" style="background: var(--twitch-purple); padding: 0 40px; border: none; height: 60px;">LOG IN WITH TWITCH</button>
+        <p style="font-size: 0.8rem; color: #666; margin-top: 20px;">Authorize to enable Host commands.</p>
     </div>
 
-    <div class="controls">
-        <div class="grid">
-            <button id="start" class="btn" onclick="send('!startgame')">START GAME</button>
-            <button id="catch" class="btn" onclick="send('!hostcatch')">HOST CATCH</button>
-            <button id="drop"  class="btn" onclick="send('!hostdrop')">HOST DROP</button>
-            <button id="minus" class="btn" onclick="send('!hostminus')">HOST MINUS</button>
+    <div id="main-interface" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="chat-container">
+            <div id="chat-embed-wrapper" style="width: 100%; height: 100%;"></div>
         </div>
-        <div id="status">Connecting to Twitch...</div>
+
+        <div class="controls">
+            <div class="grid">
+                <button id="start" class="btn" onclick="send('!startgame')">START GAME</button>
+                <button id="catch" class="btn" onclick="send('!hostcatch')">HOST CATCH</button>
+                <button id="drop"  class="btn" onclick="send('!hostdrop')">HOST DROP</button>
+                <button id="minus" class="btn" onclick="send('!hostminus')">HOST MINUS</button>
+            </div>
+            <div id="status">Connecting...</div>
+        </div>
     </div>
 
     <script>
+        const CLIENT_ID = 'u6mdxwgsduh7wdp0s0ifxlpnu9q76z'; // <--- PUT YOUR CLIENT ID HERE
         const CHANNEL = 'bigloubeats81';
-        const OAUTH_TOKEN = 'oauth:12u1pbhgvupaayd6pqu5kfprrfb23m'; 
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
 
-       const statusEl = document.getElementById('status');
-    
-    const client = new tmi.Client({
-        connection: { reconnect: true, secure: true },
-        identity: { username: CHANNEL, password: OAUTH_TOKEN },
-        channels: [ CHANNEL ]
-    });
-
-    window.send = function(command) {
-        if (client.readyState() !== "OPEN") {
-            statusEl.innerText = "State: " + client.readyState();
-            return;
+        function login() {
+            const scope = 'chat:edit+chat:read';
+            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=token&scope=${scope}`;
         }
-        client.say(CHANNEL, command);
-    };
 
-    // DEBUGGING LOGS ON SCREEN
-    client.on('log', ({level, message}) => {
-        if(level === 'error' || level === 'warn') {
-            statusEl.innerText = "Log: " + message;
+        // Logic to handle the token after login redirect
+        const params = new URLSearchParams(window.location.hash.replace('#', '?'));
+        const token = params.get('access_token');
+
+        if (token) {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-interface').style.display = 'flex';
+            
+            // Load Chat Iframe
+            document.getElementById('chat-embed-wrapper').innerHTML = `
+                <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=${window.location.hostname}&darkpopout" height="100%" width="100%" allow="autoplay; fullscreen" sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-forms"></iframe>
+            `;
+
+            // Initialize Twitch Client
+            const client = new tmi.Client({
+                options: { debug: false },
+                connection: { reconnect: true, secure: true },
+                identity: { username: CHANNEL, password: `oauth:${token}` },
+                channels: [ CHANNEL ]
+            });
+
+            window.send = function(command) {
+                if (client.readyState() !== "OPEN") return;
+                client.say(CHANNEL, command).catch(e => console.error(e));
+                document.getElementById('status').innerText = "Command Sent: " + command;
+            };
+
+            client.connect().then(() => {
+                document.getElementById('status').innerText = "CONNECTED AS HOST";
+                document.getElementById('status').style.color = "#4ade80";
+            }).catch(err => {
+                document.getElementById('status').innerText = "AUTH ERROR";
+                console.error(err);
+            });
         }
-    });
-
-    client.connect()
-        .then(() => { statusEl.innerText = "CONNECTED"; statusEl.style.color = "#4ade80"; })
-        .catch(err => { statusEl.innerText = "ERR: " + JSON.stringify(err); });
-</script>
+    </script>
 </body>
 </html>
-
