@@ -3,154 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>boomieVS - Host</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tmi.js/1.8.5/tmi.min.js"></script>
+    <title>boomieVS - Clipboard Deck</title>
     <style>
         :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
         * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: white; font-family: system-ui, -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body { background: var(--bg); color: white; font-family: -apple-system, system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        #main-interface { display: none; flex-direction: column; height: 100%; }
-        
+        /* Layout */
         .chat-container { flex: 1; background: #000; border-bottom: 2px solid #333; }
         iframe { width: 100%; height: 100%; border: none; }
         
         .controls { background: #18181b; padding: 15px; padding-bottom: env(safe-area-inset-bottom); }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px; margin: 0 auto; }
         
-        /* High-Visibility Buttons */
+        /* Buttons */
         .btn { 
-            height: 75px; font-weight: 800; border: none; border-radius: 12px; 
+            height: 70px; font-weight: 800; border: none; border-radius: 12px; 
             color: white; background: #26262c; box-shadow: 0 5px 0 #000; 
-            font-size: 1rem; cursor: pointer; transition: transform 0.05s;
-            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
-        .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #000; background: #3f3f46; }
+        .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #000; background: #4ade80; color: black; }
         
         #start { border-top: 5px solid #4ade80; }
         #catch { border-top: 5px solid #60a5fa; }
         #drop  { border-top: 5px solid #f87171; }
         #minus { border-top: 5px solid #fbbf24; }
         
-        #status { text-align: center; font-size: 0.7rem; color: #666; margin-top: 12px; font-family: monospace; }
-        .login-btn { background: var(--twitch-purple) !important; padding: 0 40px; border: none; box-shadow: 0 4px 0 #4c1d95; }
+        #status { text-align: center; font-size: 0.8rem; color: #aaa; margin-top: 12px; font-weight: bold; height: 1.2rem; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen">
-        <h1 style="color: var(--twitch-purple)">boomieVS</h1>
-        <button onclick="login()" class="btn login-btn">LOG IN TO START</button>
+    <div class="chat-container">
+        <iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io&darkpopout" 
+        height="100%" width="100%"></iframe>
     </div>
 
-    <div id="main-interface">
-        <div class="chat-container" id="chat-target"></div>
-        <div class="controls">
-            <div class="grid">
-                <button id="start" class="btn" onclick="send('!startgame')">START</button>
-                <button id="catch" class="btn" onclick="send('!hostcatch')">CATCH</button>
-                <button id="drop"  class="btn" onclick="send('!hostdrop')">DROP</button>
-                <button id="minus" class="btn" onclick="send('!hostminus')">MINUS</button>
-            </div>
-            <div id="status">INITIALIZING...</div>
+    <div class="controls">
+        <div id="status">TAP A BUTTON TO COPY</div>
+        <div class="grid">
+            <button class="btn" id="start" onclick="copyCmd('!startgame')">START</button>
+            <button class="btn" id="catch" onclick="copyCmd('!hostcatch')">CATCH</button>
+            <button class="btn" id="drop" onclick="copyCmd('!hostdrop')">DROP</button>
+            <button class="btn" id="minus" onclick="copyCmd('!hostminus')">MINUS</button>
         </div>
     </div>
 
     <script>
-// 1. Setup Global State
-let client = null;
-const CHANNEL = 'bigloubeats81';
-const CLIENT_ID = 'i5dxhow968w291edfu4ll4sucr3buf';
-const REDIRECT_URI = 'https://bigloubeats.github.io/boomieVS/index.html';
+        function copyCmd(text) {
+            const status = document.getElementById('status');
+            
+            // Modern Clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    updateStatus(text);
+                }).catch(err => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
 
-// 2. Define Send (Safe from ReferenceErrors)
-window.send = function(cmd) {
-    const status = document.getElementById('status');
-    
-    if (!client || client.readyState() !== "OPEN") {
-        status.innerText = "NOT CONNECTED. TRY LOGGING IN AGAIN.";
-        status.style.color = "#f87171";
-        return;
-    }
+        // Fallback for older browsers/Safari versions
+        function fallbackCopy(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                updateStatus(text);
+            } catch (err) {
+                document.getElementById('status').innerText = "COPY FAILED";
+            }
+            document.body.removeChild(textArea);
+        }
 
-    client.say(CHANNEL, cmd)
-        .then(() => {
-            status.innerText = "SENT: " + cmd;
+        function updateStatus(text) {
+            const status = document.getElementById('status');
+            status.innerText = "COPIED: " + text;
             status.style.color = "#4ade80";
-            if (navigator.vibrate) navigator.vibrate(50); 
-        })
-        .catch(err => {
-            status.innerText = "SEND ERROR: " + err;
-        });
-};
-
-function login() {
-    const scope = encodeURIComponent('chat:edit chat:read');
-    const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scope}`;
-    window.location.href = authUrl;
-}
-
-// 3. The Logic to "Catch" the token and start TMI
-function startApp() {
-    const status = document.getElementById('status');
-    
-    // Attempt to find token in the URL hash
-    const hash = window.location.hash;
-    if (!hash || !hash.includes('access_token=')) {
-        console.log("No token found in URL yet.");
-        status.innerText = "WAITING FOR LOGIN...";
-        return;
-    }
-
-    // Manual parsing of the token (more reliable than URLSearchParams for hashes)
-    const token = hash.split('access_token=')[1].split('&')[0];
-
-    if (token) {
-        console.log("Token captured!");
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('main-interface').style.display = 'flex';
-        status.innerText = "CONNECTING...";
-
-        // Load Chat
-        document.getElementById('chat-target').innerHTML = `
-            <iframe src="https://www.twitch.tv/embed/${CHANNEL}/chat?parent=bigloubeats.github.io&darkpopout" 
-            height="100%" width="100%"></iframe>`;
-
-        // Create the TMI Client
-        client = new tmi.Client({
-            connection: { reconnect: true, secure: true },
-            identity: {
-                username: CHANNEL, // NOTE: Must be the account you logged in with!
-                password: `oauth:${token}`
-            },
-            channels: [ CHANNEL ]
-        });
-
-        client.connect()
-            .then(() => {
-                status.innerText = "CONNECTED AS " + CHANNEL.toUpperCase();
-                status.style.color = "#4ade80";
-            })
-            .catch(e => {
-                status.innerText = "CONNECTION ERROR: " + e;
-                console.error(e);
-            });
-    }
-}
-
-// Run as soon as the DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startApp);
-} else {
-    startApp();
-}
+            
+            // Haptic feedback for mobile
+            if (navigator.vibrate) navigator.vibrate(50);
+            
+            setTimeout(() => {
+                status.innerText = "READY TO PASTE";
+                status.style.color = "#aaa";
+            }, 1500);
+        }
     </script>
 </body>
 </html>
-
-
-
-
-
-
