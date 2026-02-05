@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>boomieVS Guest Remote</title>
+    <style>
+        :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
+        * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .chat-container { flex: 1; background: #000; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .controls { background: #18181b; padding: 15px; border-top: 2px solid #333; padding-bottom: env(safe-area-inset-bottom, 15px); }
+        .status-bar { text-align: center; font-size: 0.75rem; color: #888; margin-bottom: 12px; font-family: monospace; }
+        
+        /* Updated grid for 3 buttons: Top one spans 2 columns, bottom two side-by-side */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 500px; margin: 0 auto; }
+        .btn { height: 80px; font-weight: 800; border: none; border-radius: 14px; color: white; background: #26262c; box-shadow: 0 4px 0 #000; font-size: 1.1rem; cursor: pointer; border-left: 6px solid #444; }
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; background: var(--twitch-purple); }
+        
+        /* Layout logic for 3 buttons */
+        #catch { grid-column: span 2; border-left-color: #60a5fa; } 
+        #drop  { border-left-color: #f87171; }
+        #minus { border-left-color: #fbbf24; }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io" height="100%" width="100%"></iframe>
+    </div>
+
+    <div class="controls">
+        <div id="status" class="status-bar">BRIDGE READY</div>
+        <div class="grid">
+            <button class="btn" id="catch" onclick="hit('!guestcatch')">GUEST CATCH</button>
+            <button class="btn" id="drop"  onclick="hit('!guestdrop')">GUEST DROP</button>
+            <button class="btn" id="minus" onclick="hit('!guestminus')">GUEST MINUS</button>
+        </div>
+    </div>
+
+    <script>
+        const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
+
+        async function hit(command) {
+            console.log("Guest attempting to send:", command);
+            const statusEl = document.getElementById('status');
+            statusEl.innerText = "SENDING...";
+            statusEl.style.color = "white";
+
+            try {
+                const response = await fetch(`${BRIDGE_URL}?cmd=${encodeURIComponent(command)}`);
+                if (response.ok) {
+                    statusEl.innerText = "SENT: " + command;
+                    statusEl.style.color = "#4ade80";
+                } else {
+                    statusEl.innerText = "BRIDGE ERROR";
+                    statusEl.style.color = "#f87171";
+                }
+            } catch (err) {
+                statusEl.innerText = "CONNECTION FAILED";
+                statusEl.style.color = "#f87171";
+                console.error(err);
+            }
+
+            setTimeout(() => {
+                statusEl.innerText = "BRIDGE READY";
+                statusEl.style.color = "#888";
+            }, 2000);
+        }
+
+        window.hit = hit;
+    </script>
+</body>
+</html>
