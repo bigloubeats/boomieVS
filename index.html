@@ -6,68 +6,101 @@
     <title>boomieVS Remote</title>
     <style>
         :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
-        * { box-sizing: border-box; touch-action: manipulation; }
-        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         
-        /* The Chat area stays the same */
-        .chat-container { flex: 1; background: #000; border-bottom: 2px solid #333; }
-        iframe { width: 100%; height: 100%; border: none; }
-        
-        .controls { background: #18181b; padding: 15px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        
-        /* The Buttons */
-        .btn { 
-            height: 70px; font-weight: 800; border: none; border-radius: 12px; 
-            color: white; background: #26262c; box-shadow: 0 5px 0 #000; 
-            font-size: 1rem; cursor: pointer; text-decoration: none;
-            display: flex; align-items: center; justify-content: center;
+        body { 
+            background: var(--bg); 
+            color: white; 
+            font-family: -apple-system, system-ui, sans-serif; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            overflow: hidden; 
         }
-        .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #000; }
-        
-        #start { border-top: 5px solid #4ade80; }
-        #catch { border-top: 5px solid #60a5fa; }
-        #drop  { border-top: 5px solid #f87171; }
-        #minus { border-top: 5px solid #fbbf24; }
-        
-        .tip { text-align: center; font-size: 0.7rem; color: #666; margin-top: 10px; }
+
+        /* Chat Frame */
+        .chat-container { flex: 1; background: #000; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* Control Panel */
+        .controls { 
+            background: #18181b; 
+            padding: 15px; 
+            padding-bottom: env(safe-area-inset-bottom, 15px);
+            border-top: 2px solid #333;
+        }
+
+        .status-bar {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 12px;
+            font-family: monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 12px; 
+            max-width: 500px; 
+            margin: 0 auto; 
+        }
+
+        /* Buttons */
+        .btn { 
+            height: 80px; 
+            font-weight: 800; 
+            border: none; 
+            border-radius: 14px; 
+            color: white; 
+            background: #26262c; 
+            box-shadow: 0 4px 0 #000; 
+            font-size: 1.1rem; 
+            cursor: pointer;
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:active { 
+            transform: translateY(2px); 
+            box-shadow: 0 2px 0 #000; 
+            background: var(--twitch-purple); 
+        }
+
+        #start { border-left: 6px solid #4ade80; }
+        #catch { border-left: 6px solid #60a5fa; }
+        #drop  { border-left: 6px solid #f87171; }
+        #minus { border-left: 6px solid #fbbf24; }
+
+        .success { color: #4ade80 !important; }
+        .error { color: #f87171 !important; }
     </style>
 </head>
 <body>
 
     <div class="chat-container">
-        <iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io" 
-        height="100%" width="100%"></iframe>
+        <iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io&darkpopout" 
+                height="100%" width="100%"></iframe>
     </div>
 
     <div class="controls">
+        <div id="status" class="status-bar">SYSTEM READY</div>
         <div class="grid">
-            <button class="btn" id="start" onclick="sendDirect('!startgame')">START</button>
-            <button class="btn" id="catch" onclick="sendDirect('!hostcatch')">CATCH</button>
-            <button class="btn" id="drop" onclick="sendDirect('!hostdrop')">DROP</button>
-            <button class="btn" id="minus" onclick="sendDirect('!hostminus')">MINUS</button>
+            <button class="btn" id="start" onclick="sendCommand('!startgame')">START</button>
+            <button class="btn" id="catch" onclick="sendCommand('!hostcatch')">CATCH</button>
+            <button class="btn" id="drop"  onclick="sendCommand('!hostdrop')">DROP</button>
+            <button class="btn" id="minus" onclick="sendCommand('!hostminus')">MINUS</button>
         </div>
-        <div class="tip">If chat is blocked, tap the "AA" icon in Safari and turn off "Prevent Cross-Site Tracking"</div>
     </div>
 
     <script>
-        // No tokens, no libraries, just direct web action.
-        function sendDirect(command) {
-            // This attempts to "Post" to the chat via the browser's memory
-            // If it can't, it will copy it to your clipboard automatically.
-            const status = document.createElement("textarea");
-            status.value = command;
-            document.body.appendChild(status);
-            status.select();
-            document.execCommand('copy');
-            document.body.removeChild(status);
+        // YOUR WORKER URL
+        const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
 
-            // Optional: Give a vibration so you know it copied
-            if (navigator.vibrate) navigator.vibrate(40);
-            
-            // Helpful hint for the user
-            alert("Command '" + command + "' copied! Just tap the chat box and paste.");
-        }
-    </script>
-</body>
-</html>
+        async function sendCommand(command) {
+            const statusEl = document.getElementById('status');
