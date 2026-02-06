@@ -19,7 +19,6 @@
             overflow: hidden; 
         }
 
-        /* 1. BUTTONS ON TOP (Fixed Height) */
         .controls { 
             background: #18181b; 
             padding: 15px; 
@@ -29,27 +28,33 @@
 
         .status-bar { text-align: center; font-size: 1rem; color: #888; margin-bottom: 10px; font-family: monospace; font-weight: bold; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 500px; margin: 0 auto; }
-        .btn { height: 65px; font-weight: 800; border: none; border-radius: 12px; color: white; background: #26262c; box-shadow: 0 4px 0 #000; font-size: 1rem; cursor: pointer; border-left: 6px solid #444; }
-        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; background: var(--twitch-purple); }
         
+        .btn { 
+            height: 65px; 
+            font-weight: 800; 
+            border: none; 
+            border-radius: 12px; 
+            color: white; 
+            background: #26262c; 
+            box-shadow: 0 4px 0 #000; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            border-left: 6px solid #444; 
+        }
+
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; background: var(--twitch-purple); }
         #start { border-left-color: #4ade80; }
         #catch { border-left-color: #60a5fa; }
         #drop  { border-left-color: #f87171; }
         #minus { border-left-color: #fbbf24; }
 
-        /* 2. CHAT IN THE MIDDLE (Shortened) */
         .chat-container { 
-            flex: 0 0 45vh; /* This limits chat to 45% of your screen height */
+            flex: 0 0 50vh; 
             background: #000; 
-            position: relative;
         }
         iframe { width: 100%; height: 100%; border: none; }
 
-        /* 3. BOTTOM SPACER (Ensures the text box isn't hidden by phone nav bars) */
-        .bottom-shelf {
-            flex: 1;
-            background: #0e0e10;
-        }
+        .bottom-shelf { flex: 1; background: #0e0e10; }
 
         .timer-active { color: #4ade80 !important; }
         .timer-finished { color: #f87171 !important; animation: blink 0.5s step-start infinite; }
@@ -76,7 +81,11 @@
 
     <script>
         const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
-        const ALARM_SOUND = new Audio('alarm.mp3'); 
+        
+        // Swapped to airhorn.mp3
+        const ALARM_SOUND = new Audio('airhorn.mp3'); 
+        ALARM_SOUND.preload = 'auto'; // Pre-loads the file into memory
+
         let timerInterval = null;
 
         function formatTime(seconds) {
@@ -115,7 +124,10 @@
                     timerInterval = null;
                     statusEl.innerText = "TIME'S UP!";
                     statusEl.classList.replace('timer-active', 'timer-finished');
-                    ALARM_SOUND.play().catch(e => console.log(e));
+                    
+                    // The Airhorn blast
+                    ALARM_SOUND.play().catch(e => console.log("Audio Error:", e));
+                    
                     setTimeout(() => {
                         statusEl.classList.remove('timer-finished');
                         statusEl.innerText = "BRIDGE READY";
@@ -124,7 +136,4 @@
                 }
             }, 1000);
         }
-    </script>
-</body>
-</html>
-
+    </
