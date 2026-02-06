@@ -3,139 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>boomieVS Host Remote</title>
+    <title>boomieVS Guest</title>
     <style>
         :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
         * { box-sizing: border-box; touch-action: manipulation; }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        .controls { background: #18181b; padding: 15px; border-bottom: 2px solid #333; flex: 0 0 auto; }
+        .status-bar { text-align: center; font-size: 0.9rem; color: #888; margin-bottom: 10px; font-family: monospace; }
         
-        body { 
-            background: var(--bg); 
-            color: white; 
-            font-family: sans-serif; 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 50vh; 
-            overflow: hidden; 
-        }
-
-        .controls { 
-            background: #18181b; 
-            padding: 15px; 
-            border-bottom: 2px solid #333;
-            flex: 0 0 auto; 
-        }
-
-        .status-bar { text-align: center; font-size: 1rem; color: #888; margin-bottom: 10px; font-family: monospace; font-weight: bold; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 500px; margin: 0 auto; }
-        
-        .btn { 
-            height: 65px; 
-            font-weight: 800; 
-            border: none; 
-            border-radius: 12px; 
-            color: white; 
-            background: #26262c; 
-            box-shadow: 0 4px 0 #000; 
-            font-size: 1rem; 
-            cursor: pointer; 
-            border-left: 6px solid #444; 
-        }
-
+        .btn { height: 70px; font-weight: 800; border: none; border-radius: 12px; color: white; background: #26262c; box-shadow: 0 4px 0 #000; font-size: 1rem; cursor: pointer; border-left: 6px solid #444; }
         .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; background: var(--twitch-purple); }
-        #start { border-left-color: #4ade80; }
-        #catch { border-left-color: #60a5fa; }
+        
+        #catch { grid-column: span 2; border-left-color: #60a5fa; }
         #drop  { border-left-color: #f87171; }
         #minus { border-left-color: #fbbf24; }
 
-        .chat-container { 
-            flex: 0 0 50vh; 
-            background: #000; 
-        }
+        .chat-container { flex: 0 0 50vh; background: #000; }
         iframe { width: 100%; height: 100%; border: none; }
-
         .bottom-shelf { flex: 1; background: #0e0e10; }
-
-        .timer-active { color: #4ade80 !important; }
-        .timer-finished { color: #f87171 !important; animation: blink 0.5s step-start infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
-
     <div class="controls">
-        <div id="status" class="status-bar">BRIDGE READY</div>
+        <div id="status" class="status-bar">GUEST READY</div>
         <div class="grid">
-            <button class="btn" id="start" onclick="startWithTimer()">START (5m)</button>
-            <button class="btn" id="catch" onclick="hit('!hostcatch')">CATCH</button>
-            <button class="btn" id="drop"  onclick="hit('!hostdrop')">DROP</button>
-            <button class="btn" id="minus" onclick="hit('!hostminus')">MINUS</button>
+            <button class="btn" id="catch" onclick="hit('!guestcatch')">GUEST CATCH</button>
+            <button class="btn" id="drop"  onclick="hit('!guestdrop')">GUEST DROP</button>
+            <button class="btn" id="minus" onclick="hit('!guestminus')">GUEST MINUS</button>
         </div>
     </div>
-
     <div class="chat-container">
         <iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io" height="100%" width="100%"></iframe>
     </div>
-
     <div class="bottom-shelf"></div>
 
     <script>
         const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
-        
-        // Swapped to airhorn.mp3
-        const ALARM_SOUND = new Audio('airhorn.mp3'); 
-        ALARM_SOUND.preload = 'auto'; // Pre-loads the file into memory
-
-        let timerInterval = null;
-
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        }
-
         async function hit(command) {
             const statusEl = document.getElementById('status');
-            if (!timerInterval) { statusEl.innerText = "SENDING..."; statusEl.style.color = "white"; }
+            statusEl.innerText = "SENDING...";
             try {
                 const response = await fetch(`${BRIDGE_URL}?cmd=${encodeURIComponent(command)}`);
-                if (response.ok && !timerInterval) {
-                    statusEl.innerText = "SENT: " + command;
-                    statusEl.style.color = "#4ade80";
-                }
-            } catch (err) { statusEl.innerText = "FAILED"; }
-            if (!timerInterval) {
-                setTimeout(() => { statusEl.innerText = "BRIDGE READY"; statusEl.style.color = "#888"; }, 2000);
-            }
+                if (response.ok) { statusEl.innerText = "SENT!"; statusEl.style.color = "#4ade80"; }
+            } catch (err) { statusEl.innerText = "ERROR"; }
+            setTimeout(() => { statusEl.innerText = "GUEST READY"; statusEl.style.color = "#888"; }, 2000);
         }
-
-        function startWithTimer() { hit('!startgame'); runTimer(300); }
-
-        function runTimer(duration) {
-            const statusEl = document.getElementById('status');
-            let timeLeft = duration;
-            clearInterval(timerInterval);
-            statusEl.classList.add('timer-active');
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                statusEl.innerText = `GAME TIME: ${formatTime(timeLeft)}`;
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                    statusEl.innerText = "TIME'S UP!";
-                    statusEl.classList.replace('timer-active', 'timer-finished');
-                    
-                    // The Airhorn blast
-                    ALARM_SOUND.play().catch(e => console.log("Audio Error:", e));
-                    
-                    setTimeout(() => {
-                        statusEl.classList.remove('timer-finished');
-                        statusEl.innerText = "BRIDGE READY";
-                        statusEl.style.color = "#888";
-                    }, 5000);
-                }
-            }, 1000);
-        }
-    </
-
-
+    </script>
+</body>
+</html>
