@@ -16,59 +16,40 @@
             display: flex; 
             flex-direction: column; 
             height: 100vh; 
-            overflow: hidden; /* Prevents accidental scrolling */
+            overflow: hidden; 
         }
 
-        /* BUTTONS SECTION AT TOP */
+        /* 1. BUTTONS ON TOP (Fixed Height) */
         .controls { 
             background: #18181b; 
             padding: 15px; 
             border-bottom: 2px solid #333;
-            flex-shrink: 0; /* Ensures buttons don't get squished */
+            flex: 0 0 auto; 
         }
 
-        .status-bar { 
-            text-align: center; 
-            font-size: 1rem; 
-            color: #888; 
-            margin-bottom: 10px; 
-            font-family: monospace; 
-            font-weight: bold;
-        }
-
-        .grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 10px; 
-            max-width: 500px; 
-            margin: 0 auto; 
-        }
-
-        .btn { 
-            height: 70px; /* Slightly shorter to save room */
-            font-weight: 800; 
-            border: none; 
-            border-radius: 12px; 
-            color: white; 
-            background: #26262c; 
-            box-shadow: 0 4px 0 #000; 
-            font-size: 1rem; 
-            cursor: pointer; 
-            border-left: 6px solid #444; 
-        }
-
+        .status-bar { text-align: center; font-size: 1rem; color: #888; margin-bottom: 10px; font-family: monospace; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 500px; margin: 0 auto; }
+        .btn { height: 65px; font-weight: 800; border: none; border-radius: 12px; color: white; background: #26262c; box-shadow: 0 4px 0 #000; font-size: 1rem; cursor: pointer; border-left: 6px solid #444; }
         .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; background: var(--twitch-purple); }
+        
         #start { border-left-color: #4ade80; }
         #catch { border-left-color: #60a5fa; }
         #drop  { border-left-color: #f87171; }
         #minus { border-left-color: #fbbf24; }
 
-        /* CHAT SECTION AT BOTTOM */
+        /* 2. CHAT IN THE MIDDLE (Shortened) */
         .chat-container { 
-            flex-grow: 1; /* Takes up all remaining space */
+            flex: 0 0 45vh; /* This limits chat to 45% of your screen height */
             background: #000; 
+            position: relative;
         }
         iframe { width: 100%; height: 100%; border: none; }
+
+        /* 3. BOTTOM SPACER (Ensures the text box isn't hidden by phone nav bars) */
+        .bottom-shelf {
+            flex: 1;
+            background: #0e0e10;
+        }
 
         .timer-active { color: #4ade80 !important; }
         .timer-finished { color: #f87171 !important; animation: blink 0.5s step-start infinite; }
@@ -91,9 +72,11 @@
         <iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io" height="100%" width="100%"></iframe>
     </div>
 
+    <div class="bottom-shelf"></div>
+
     <script>
         const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
-        const ALARM_SOUND = new Audio('airhorn.mp3'); 
+        const ALARM_SOUND = new Audio('alarm.mp3'); 
         let timerInterval = null;
 
         function formatTime(seconds) {
