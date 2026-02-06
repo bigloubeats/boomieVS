@@ -84,26 +84,9 @@
         .timer-finished { color: #f87171 !important; animation: blink 0.5s step-start infinite; }
         @keyframes blink { 50% { opacity: 0; } }
     </style>
-</head>
-<body>
-
-    <div class="controls">
-        <div id="status" class="status-bar">BRIDGE READY</div>
-        <div class="grid">
-            <button class="btn" id="start" onclick="startWithTimer()">START (5m)</button>
-            <button class="btn" id="catch" onclick="hit('!hostcatch')">CATCH</button>
-            <button class="btn" id="drop"  onclick="hit('!hostdrop')">DROP</button>
-            <button class="btn" id="minus" onclick="hit('!hostminus')">MINUS</button>
-        </div>
-    </div>
-
-    <div class="chat-container">
-        <iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io" height="100%" width="100%"></iframe>
-    </div>
-
-    <div class="bottom-shelf"></div>
 
     <script>
+        // --- Move Logic to Head to prevent "Not Defined" errors ---
         const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
         const ALARM_SOUND = new Audio('airhorn.mp3'); 
         ALARM_SOUND.preload = 'auto';
@@ -136,8 +119,11 @@
 
             if (!timerInterval) {
                 setTimeout(() => { 
-                    statusEl.innerText = "BRIDGE READY"; 
-                    statusEl.style.color = "#888"; 
+                    const s = document.getElementById('status');
+                    if(s && !timerInterval) {
+                        s.innerText = "BRIDGE READY"; 
+                        s.style.color = "#888"; 
+                    }
                 }, 2000);
             }
         }
@@ -146,14 +132,13 @@
             const statusEl = document.getElementById('status');
             let preCount = 3;
 
-            // 1. iOS AUDIO FIX: Prime the airhorn immediately on user tap
+            // iOS AUDIO FIX
             ALARM_SOUND.play().then(() => {
                 ALARM_SOUND.pause();
                 ALARM_SOUND.currentTime = 0;
             }).catch(e => console.log("Audio primed"));
 
-            // 2. Pre-Game Countdown (3, 2, 1)
-            clearInterval(timerInterval); // Reset if already running
+            clearInterval(timerInterval); 
             statusEl.style.color = "#fbbf24"; 
             statusEl.innerText = `STARTING IN... ${preCount}`;
 
@@ -163,7 +148,6 @@
                     statusEl.innerText = `STARTING IN... ${preCount}`;
                 } else {
                     clearInterval(countdown);
-                    // 3. Trigger Twitch Command & Main Timer
                     hit('!startgame'); 
                     runTimer(300); // Set to 300 for 5 minutes
                 }
@@ -188,7 +172,6 @@
                     statusEl.innerText = "TIME'S UP!";
                     statusEl.classList.replace('timer-active', 'timer-finished');
                     
-                    // Trigger the Airhorn
                     ALARM_SOUND.play().catch(e => console.error("Audio failed:", e));
                     
                     setTimeout(() => {
@@ -200,8 +183,28 @@
             }, 1000);
         }
 
+        // Attach to window immediately
         window.hit = hit;
         window.startWithTimer = startWithTimer;
     </script>
+</head>
+<body>
+
+    <div class="controls">
+        <div id="status" class="status-bar">BRIDGE READY</div>
+        <div class="grid">
+            <button class="btn" id="start" onclick="startWithTimer()">START (5m)</button>
+            <button class="btn" id="catch" onclick="hit('!hostcatch')">CATCH</button>
+            <button class="btn" id="drop"  onclick="hit('!hostdrop')">DROP</button>
+            <button class="btn" id="minus" onclick="hit('!hostminus')">MINUS</button>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io" height="100%" width="100%"></iframe>
+    </div>
+
+    <div class="bottom-shelf"></div>
+
 </body>
 </html>
