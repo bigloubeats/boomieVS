@@ -9,71 +9,27 @@
         * { box-sizing: border-box; touch-action: manipulation; }
         
         body { 
-            background: var(--bg); 
-            color: white; 
-            font-family: sans-serif; 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            overflow: hidden; 
+            background: var(--bg); color: white; font-family: sans-serif; 
+            margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
         }
 
-        .controls { 
-            background: #18181b; 
-            padding: 15px; 
-            border-bottom: 2px solid #333;
-            flex: 0 0 auto; 
-        }
-
-        .status-bar { 
-            text-align: center; 
-            font-size: 1rem; 
-            color: #888; 
-            margin-bottom: 10px; 
-            font-family: monospace; 
-            font-weight: bold;
-            min-height: 1.2em;
-        }
-
-        .grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 10px; 
-            max-width: 500px; 
-            margin: 0 auto; 
-        }
-
+        .controls { background: #18181b; padding: 15px; border-bottom: 2px solid #333; flex: 0 0 auto; }
+        .status-bar { text-align: center; font-size: 1rem; color: #888; margin-bottom: 10px; font-family: monospace; font-weight: bold; min-height: 1.2em; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 500px; margin: 0 auto; }
+        
         .btn { 
-            height: 65px; 
-            font-weight: 800; 
-            border: none; 
-            border-radius: 12px; 
-            color: white; 
-            background: #26262c; 
-            box-shadow: 0 4px 0 #000; 
-            font-size: 1rem; 
-            cursor: pointer; 
-            border-left: 6px solid #444; 
+            height: 65px; font-weight: 800; border: none; border-radius: 12px; color: white; 
+            background: #26262c; box-shadow: 0 4px 0 #000; font-size: 1rem; cursor: pointer; border-left: 6px solid #444; 
         }
 
-        .btn:active { 
-            transform: translateY(2px); 
-            box-shadow: 0 2px 0 #000; 
-            background: var(--twitch-purple); 
-        }
-
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; background: var(--twitch-purple); }
         #start { border-left-color: #4ade80; }
         #catch { border-left-color: #60a5fa; }
         #drop  { border-left-color: #f87171; }
         #minus { border-left-color: #fbbf24; }
 
-        .chat-container { 
-            flex: 0 0 50vh; 
-            background: #000; 
-        }
+        .chat-container { flex: 0 0 50vh; background: #000; }
         iframe { width: 100%; height: 100%; border: none; }
-
         .bottom-shelf { flex: 1; background: #0e0e10; }
 
         .timer-active { color: #4ade80 !important; }
@@ -96,12 +52,10 @@
 
         async function hit(command, silent = false) {
             const statusEl = document.getElementById('status');
-            
             if (!silent && !timerInterval) { 
                 statusEl.innerText = "SENDING..."; 
                 statusEl.style.color = "white"; 
             }
-
             try {
                 const response = await fetch(`${BRIDGE_URL}?cmd=${encodeURIComponent(command)}`);
                 if (response.ok && !timerInterval && !silent) {
@@ -109,51 +63,50 @@
                     statusEl.style.color = "#4ade80";
                 }
             } catch (err) { 
-                if (!silent) {
-                    statusEl.innerText = "FAILED"; 
-                    statusEl.style.color = "#f87171";
-                }
+                if (!silent) { statusEl.innerText = "FAILED"; statusEl.style.color = "#f87171"; }
             }
-
             if (!timerInterval && !silent) {
                 setTimeout(() => { 
                     const s = document.getElementById('status');
-                    if(s && !timerInterval) {
-                        s.innerText = "BRIDGE READY"; 
-                        s.style.color = "#888"; 
-                    }
+                    if(s && !timerInterval) { s.innerText = "BRIDGE READY"; s.style.color = "#888"; }
                 }, 2000);
             }
         }
 
+        // Helper to "keep audio awake" for iOS
+        function pokeAudio() {
+            ALARM_SOUND.play().then(() => {
+                ALARM_SOUND.pause();
+                ALARM_SOUND.currentTime = 0;
+            }).catch(e => console.log("Poke failed"));
+        }
+
         function startWithTimer() {
             const statusEl = document.getElementById('status');
-            let preCount = 12;
+            let preCount = 11;
 
             // 1. Send Twitch Command Immediately
             hit('!startgame', true); 
 
-            // 2. Clear any existing timer/status
+            // 2. IMMEDIATE PRIME (Crucial for iOS tap-to-play)
+            pokeAudio();
+
             clearInterval(timerInterval); 
             statusEl.style.color = "#fbbf24"; 
             statusEl.innerText = `READY... ${preCount}`;
 
-            // 3. Start the 3-2-1 Countdown
             const countdown = setInterval(() => {
                 preCount--;
+                
+                // Keep the audio thread alive by poking it every few seconds
+                if (preCount % 2 === 0) pokeAudio();
+
                 if (preCount > 0) {
                     statusEl.innerText = `READY... ${preCount}`;
                 } else {
                     clearInterval(countdown);
-                    
-                    // 4. PRIME AUDIO NOW (when 3-2-1 finishes)
-                    // This tells the iPhone "Sound is coming later" right as the game starts
-                    ALARM_SOUND.play().then(() => {
-                        ALARM_SOUND.pause();
-                        ALARM_SOUND.currentTime = 0;
-                    }).catch(e => console.log("Audio primed at 0"));
-
-                    // 5. Start the main 5-minute clock
+                    // Final poke right before game starts
+                    pokeAudio();
                     runTimer(300); 
                 }
             }, 1000);
@@ -162,7 +115,6 @@
         function runTimer(duration) {
             const statusEl = document.getElementById('status');
             let timeLeft = duration;
-            
             statusEl.classList.remove('timer-finished');
             statusEl.classList.add('timer-active');
             
@@ -173,11 +125,15 @@
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     timerInterval = null;
-                    
                     statusEl.innerText = "TIME'S UP!";
                     statusEl.classList.replace('timer-active', 'timer-finished');
                     
-                    ALARM_SOUND.play().catch(e => console.error("Audio failed:", e));
+                    // Final Airhorn Blast
+                    ALARM_SOUND.play().catch(e => {
+                        console.error("Final play failed:", e);
+                        // Emergency fallback: Alert the user if sound fails
+                        alert("TIME IS UP!");
+                    });
                     
                     setTimeout(() => {
                         statusEl.classList.remove('timer-finished');
@@ -193,7 +149,6 @@
     </script>
 </head>
 <body>
-
     <div class="controls">
         <div id="status" class="status-bar">BRIDGE READY</div>
         <div class="grid">
@@ -203,12 +158,9 @@
             <button class="btn" id="minus" onclick="hit('!hostminus')">MINUS</button>
         </div>
     </div>
-
     <div class="chat-container">
         <iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io" height="100%" width="100%"></iframe>
     </div>
-
     <div class="bottom-shelf"></div>
-
 </body>
 </html>
