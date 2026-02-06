@@ -109,7 +109,20 @@
             }
         }
 
-        function startWithTimer() { hit('!startgame'); runTimer(30); }
+        function startWithTimer() {
+    // 1. Send the command to Twitch
+    hit('!startgame'); 
+
+    // 2. iOS FIX: "Wake up" the audio engine
+    // We play and immediately pause so the phone allows it later
+    ALARM_SOUND.play().then(() => {
+        ALARM_SOUND.pause();
+        ALARM_SOUND.currentTime = 0;
+    }).catch(e => console.log("Audio priming blocked:", e));
+    
+    // 3. Start the countdown (change 30 to 300 when done testing)
+    runTimer(30); 
+}
 
         function runTimer(duration) {
             const statusEl = document.getElementById('status');
@@ -139,4 +152,5 @@
     </script>
 </body>
 </html>
+
 
