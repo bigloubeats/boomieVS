@@ -97,7 +97,6 @@
         async function hit(command, silent = false) {
             const statusEl = document.getElementById('status');
             
-            // If not silent (regular button press), show sending status
             if (!silent && !timerInterval) { 
                 statusEl.innerText = "SENDING..."; 
                 statusEl.style.color = "white"; 
@@ -116,7 +115,6 @@
                 }
             }
 
-            // Only auto-reset status if no timer is taking over
             if (!timerInterval && !silent) {
                 setTimeout(() => { 
                     const s = document.getElementById('status');
@@ -130,29 +128,32 @@
 
         function startWithTimer() {
             const statusEl = document.getElementById('status');
-            let preCount = 8;
+            let preCount = 12;
 
-            // 1. SEND COMMAND IMMEDIATELY
+            // 1. Send Twitch Command Immediately
             hit('!startgame', true); 
 
-            // 2. iOS AUDIO FIX: Wake up airhorn
-            ALARM_SOUND.play().then(() => {
-                ALARM_SOUND.pause();
-                ALARM_SOUND.currentTime = 0;
-            }).catch(e => console.log("Audio primed"));
-
-            // 3. START 3-2-1 VISUAL COUNTDOWN
+            // 2. Clear any existing timer/status
             clearInterval(timerInterval); 
             statusEl.style.color = "#fbbf24"; 
             statusEl.innerText = `READY... ${preCount}`;
 
+            // 3. Start the 3-2-1 Countdown
             const countdown = setInterval(() => {
                 preCount--;
                 if (preCount > 0) {
                     statusEl.innerText = `READY... ${preCount}`;
                 } else {
                     clearInterval(countdown);
-                    // 4. START THE MAIN GAME CLOCK (5 MINS)
+                    
+                    // 4. PRIME AUDIO NOW (when 3-2-1 finishes)
+                    // This tells the iPhone "Sound is coming later" right as the game starts
+                    ALARM_SOUND.play().then(() => {
+                        ALARM_SOUND.pause();
+                        ALARM_SOUND.currentTime = 0;
+                    }).catch(e => console.log("Audio primed at 0"));
+
+                    // 5. Start the main 5-minute clock
                     runTimer(300); 
                 }
             }, 1000);
@@ -211,4 +212,3 @@
 
 </body>
 </html>
-
