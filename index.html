@@ -160,4 +160,48 @@
             const countdown = setInterval(() => {
                 preCount--;
                 if (preCount > 0) {
-                    statusEl.innerText = `STARTING IN
+                    statusEl.innerText = `STARTING IN... ${preCount}`;
+                } else {
+                    clearInterval(countdown);
+                    // 3. Trigger Twitch Command & Main Timer
+                    hit('!startgame'); 
+                    runTimer(300); // Set to 300 for 5 minutes
+                }
+            }, 1000);
+        }
+
+        function runTimer(duration) {
+            const statusEl = document.getElementById('status');
+            let timeLeft = duration;
+            
+            statusEl.classList.remove('timer-finished');
+            statusEl.classList.add('timer-active');
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                statusEl.innerText = `GAME TIME: ${formatTime(timeLeft)}`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    
+                    statusEl.innerText = "TIME'S UP!";
+                    statusEl.classList.replace('timer-active', 'timer-finished');
+                    
+                    // Trigger the Airhorn
+                    ALARM_SOUND.play().catch(e => console.error("Audio failed:", e));
+                    
+                    setTimeout(() => {
+                        statusEl.classList.remove('timer-finished');
+                        statusEl.innerText = "BRIDGE READY";
+                        statusEl.style.color = "#888";
+                    }, 7000);
+                }
+            }, 1000);
+        }
+
+        window.hit = hit;
+        window.startWithTimer = startWithTimer;
+    </script>
+</body>
+</html>
