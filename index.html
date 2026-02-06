@@ -19,7 +19,6 @@
             overflow: hidden; 
         }
 
-        /* TOP CONTROLS */
         .controls { 
             background: #18181b; 
             padding: 15px; 
@@ -69,24 +68,20 @@
         #drop  { border-left-color: #f87171; }
         #minus { border-left-color: #fbbf24; }
 
-        /* MIDDLE CHAT */
         .chat-container { 
             flex: 0 0 50vh; 
             background: #000; 
         }
         iframe { width: 100%; height: 100%; border: none; }
 
-        /* BOTTOM BUFFER */
         .bottom-shelf { flex: 1; background: #0e0e10; }
 
-        /* ANIMATIONS */
         .timer-active { color: #4ade80 !important; }
         .timer-finished { color: #f87171 !important; animation: blink 0.5s step-start infinite; }
         @keyframes blink { 50% { opacity: 0; } }
     </style>
 
     <script>
-        // --- Move Logic to Head to prevent "Not Defined" errors ---
         const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
         const ALARM_SOUND = new Audio('airhorn.mp3'); 
         ALARM_SOUND.preload = 'auto';
@@ -99,25 +94,30 @@
             return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
 
-        async function hit(command) {
+        async function hit(command, silent = false) {
             const statusEl = document.getElementById('status');
-            if (!timerInterval) { 
+            
+            // If not silent (regular button press), show sending status
+            if (!silent && !timerInterval) { 
                 statusEl.innerText = "SENDING..."; 
                 statusEl.style.color = "white"; 
             }
 
             try {
                 const response = await fetch(`${BRIDGE_URL}?cmd=${encodeURIComponent(command)}`);
-                if (response.ok && !timerInterval) {
+                if (response.ok && !timerInterval && !silent) {
                     statusEl.innerText = "SENT: " + command;
                     statusEl.style.color = "#4ade80";
                 }
             } catch (err) { 
-                statusEl.innerText = "FAILED"; 
-                statusEl.style.color = "#f87171";
+                if (!silent) {
+                    statusEl.innerText = "FAILED"; 
+                    statusEl.style.color = "#f87171";
+                }
             }
 
-            if (!timerInterval) {
+            // Only auto-reset status if no timer is taking over
+            if (!timerInterval && !silent) {
                 setTimeout(() => { 
                     const s = document.getElementById('status');
                     if(s && !timerInterval) {
@@ -132,24 +132,28 @@
             const statusEl = document.getElementById('status');
             let preCount = 3;
 
-            // iOS AUDIO FIX
+            // 1. SEND COMMAND IMMEDIATELY
+            hit('!startgame', true); 
+
+            // 2. iOS AUDIO FIX: Wake up airhorn
             ALARM_SOUND.play().then(() => {
                 ALARM_SOUND.pause();
                 ALARM_SOUND.currentTime = 0;
             }).catch(e => console.log("Audio primed"));
 
+            // 3. START 3-2-1 VISUAL COUNTDOWN
             clearInterval(timerInterval); 
             statusEl.style.color = "#fbbf24"; 
-            statusEl.innerText = `STARTING IN... ${preCount}`;
+            statusEl.innerText = `READY... ${preCount}`;
 
             const countdown = setInterval(() => {
                 preCount--;
                 if (preCount > 0) {
-                    statusEl.innerText = `STARTING IN... ${preCount}`;
+                    statusEl.innerText = `READY... ${preCount}`;
                 } else {
                     clearInterval(countdown);
-                    hit('!startgame'); 
-                    runTimer(300); // Set to 300 for 5 minutes
+                    // 4. START THE MAIN GAME CLOCK (5 MINS)
+                    runTimer(300); 
                 }
             }, 1000);
         }
@@ -183,7 +187,6 @@
             }, 1000);
         }
 
-        // Attach to window immediately
         window.hit = hit;
         window.startWithTimer = startWithTimer;
     </script>
