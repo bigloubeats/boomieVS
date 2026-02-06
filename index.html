@@ -19,6 +19,7 @@
             overflow: hidden; 
         }
 
+        /* TOP CONTROLS */
         .controls { 
             background: #18181b; 
             padding: 15px; 
@@ -26,9 +27,24 @@
             flex: 0 0 auto; 
         }
 
-        .status-bar { text-align: center; font-size: 1rem; color: #888; margin-bottom: 10px; font-family: monospace; font-weight: bold; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 500px; margin: 0 auto; }
-        
+        .status-bar { 
+            text-align: center; 
+            font-size: 1rem; 
+            color: #888; 
+            margin-bottom: 10px; 
+            font-family: monospace; 
+            font-weight: bold;
+            min-height: 1.2em;
+        }
+
+        .grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px; 
+            max-width: 500px; 
+            margin: 0 auto; 
+        }
+
         .btn { 
             height: 65px; 
             font-weight: 800; 
@@ -42,20 +58,28 @@
             border-left: 6px solid #444; 
         }
 
-        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; background: var(--twitch-purple); }
+        .btn:active { 
+            transform: translateY(2px); 
+            box-shadow: 0 2px 0 #000; 
+            background: var(--twitch-purple); 
+        }
+
         #start { border-left-color: #4ade80; }
         #catch { border-left-color: #60a5fa; }
         #drop  { border-left-color: #f87171; }
         #minus { border-left-color: #fbbf24; }
 
+        /* MIDDLE CHAT */
         .chat-container { 
             flex: 0 0 50vh; 
             background: #000; 
         }
         iframe { width: 100%; height: 100%; border: none; }
 
+        /* BOTTOM BUFFER */
         .bottom-shelf { flex: 1; background: #0e0e10; }
 
+        /* ANIMATIONS */
         .timer-active { color: #4ade80 !important; }
         .timer-finished { color: #f87171 !important; animation: blink 0.5s step-start infinite; }
         @keyframes blink { 50% { opacity: 0; } }
@@ -81,10 +105,8 @@
 
     <script>
         const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
-        
-        // Swapped to airhorn.mp3
         const ALARM_SOUND = new Audio('airhorn.mp3'); 
-        ALARM_SOUND.preload = 'auto'; // Pre-loads the file into memory
+        ALARM_SOUND.preload = 'auto';
 
         let timerInterval = null;
 
@@ -96,61 +118,46 @@
 
         async function hit(command) {
             const statusEl = document.getElementById('status');
-            if (!timerInterval) { statusEl.innerText = "SENDING..."; statusEl.style.color = "white"; }
+            if (!timerInterval) { 
+                statusEl.innerText = "SENDING..."; 
+                statusEl.style.color = "white"; 
+            }
+
             try {
                 const response = await fetch(`${BRIDGE_URL}?cmd=${encodeURIComponent(command)}`);
                 if (response.ok && !timerInterval) {
                     statusEl.innerText = "SENT: " + command;
                     statusEl.style.color = "#4ade80";
                 }
-            } catch (err) { statusEl.innerText = "FAILED"; }
+            } catch (err) { 
+                statusEl.innerText = "FAILED"; 
+                statusEl.style.color = "#f87171";
+            }
+
             if (!timerInterval) {
-                setTimeout(() => { statusEl.innerText = "BRIDGE READY"; statusEl.style.color = "#888"; }, 2000);
+                setTimeout(() => { 
+                    statusEl.innerText = "BRIDGE READY"; 
+                    statusEl.style.color = "#888"; 
+                }, 2000);
             }
         }
 
         function startWithTimer() {
-    // 1. Send the command to Twitch
-    hit('!startgame'); 
-
-    // 2. iOS FIX: "Wake up" the audio engine
-    // We play and immediately pause so the phone allows it later
-    ALARM_SOUND.play().then(() => {
-        ALARM_SOUND.pause();
-        ALARM_SOUND.currentTime = 0;
-    }).catch(e => console.log("Audio priming blocked:", e));
-    
-    // 3. Start the countdown (change 30 to 300 when done testing)
-    runTimer(30); 
-}
-
-        function runTimer(duration) {
             const statusEl = document.getElementById('status');
-            let timeLeft = duration;
-            clearInterval(timerInterval);
-            statusEl.classList.add('timer-active');
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                statusEl.innerText = `GAME TIME: ${formatTime(timeLeft)}`;
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                    statusEl.innerText = "TIME'S UP!";
-                    statusEl.classList.replace('timer-active', 'timer-finished');
-                    
-                    // The Airhorn blast
-                    ALARM_SOUND.play().catch(e => console.log("Audio Error:", e));
-                    
-                    setTimeout(() => {
-                        statusEl.classList.remove('timer-finished');
-                        statusEl.innerText = "BRIDGE READY";
-                        statusEl.style.color = "#888";
-                    }, 5000);
-                }
-            }, 1000);
-        }
-    </script>
-</body>
-</html>
+            let preCount = 3;
 
+            // 1. iOS AUDIO FIX: Prime the airhorn immediately on user tap
+            ALARM_SOUND.play().then(() => {
+                ALARM_SOUND.pause();
+                ALARM_SOUND.currentTime = 0;
+            }).catch(e => console.log("Audio primed"));
 
+            // 2. Pre-Game Countdown (3, 2, 1)
+            clearInterval(timerInterval); // Reset if already running
+            statusEl.style.color = "#fbbf24"; 
+            statusEl.innerText = `STARTING IN... ${preCount}`;
+
+            const countdown = setInterval(() => {
+                preCount--;
+                if (preCount > 0) {
+                    statusEl.innerText = `STARTING IN
