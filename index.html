@@ -7,78 +7,18 @@
     <style>
         :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
         * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            background: var(--bg); 
-            color: white; 
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            overflow: hidden; 
-        }
-
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .chat-container { flex: 1; background: #000; }
         iframe { width: 100%; height: 100%; border: none; }
-
-        .controls { 
-            background: #18181b; 
-            padding: 15px; 
-            border-top: 2px solid #333; 
-            padding-bottom: env(safe-area-inset-bottom, 15px); 
-        }
-
-        .status-bar { 
-            text-align: center; 
-            font-size: 0.9rem; 
-            color: #888; 
-            margin-bottom: 12px; 
-            font-family: 'Courier New', Courier, monospace; 
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        .grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 12px; 
-            max-width: 500px; 
-            margin: 0 auto; 
-        }
-
-        .btn { 
-            height: 80px; 
-            font-weight: 800; 
-            border: none; 
-            border-radius: 14px; 
-            color: white; 
-            background: #26262c; 
-            box-shadow: 0 4px 0 #000; 
-            font-size: 1.1rem; 
-            cursor: pointer; 
-            border-left: 6px solid #444; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .btn:active { 
-            transform: translateY(2px); 
-            box-shadow: 0 2px 0 #000; 
-            background: var(--twitch-purple); 
-        }
-
-        /* Button Colors */
+        .controls { background: #18181b; padding: 15px; border-top: 2px solid #333; padding-bottom: env(safe-area-inset-bottom, 15px); }
+        .status-bar { text-align: center; font-size: 0.9rem; color: #888; margin-bottom: 12px; font-family: monospace; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 500px; margin: 0 auto; }
+        .btn { height: 80px; font-weight: 800; border: none; border-radius: 14px; color: white; background: #26262c; box-shadow: 0 4px 0 #000; font-size: 1.1rem; cursor: pointer; border-left: 6px solid #444; }
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; background: var(--twitch-purple); }
         #start { border-left-color: #4ade80; }
         #catch { border-left-color: #60a5fa; }
         #drop  { border-left-color: #f87171; }
         #minus { border-left-color: #fbbf24; }
-
-        .timer-active { color: #4ade80 !important; font-size: 1.1rem; }
-        .timer-finished { color: #f87171 !important; animation: blink 0.5s step-start infinite; }
-
-        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
@@ -90,7 +30,7 @@
     <div class="controls">
         <div id="status" class="status-bar">BRIDGE READY</div>
         <div class="grid">
-            <button class="btn" id="start" onclick="startWithTimer()">START (5m)</button>
+            <button class="btn" id="start" onclick="startWithTimer(60)">START (1m)</button>
             <button class="btn" id="catch" onclick="hit('!hostcatch')">CATCH</button>
             <button class="btn" id="drop"  onclick="hit('!hostdrop')">DROP</button>
             <button class="btn" id="minus" onclick="hit('!hostminus')">MINUS</button>
@@ -98,25 +38,15 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
         const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
         
-        // Ensure 'alarm.mp3' is uploaded to the same folder on GitHub
-        const ALARM_SOUND = new Audio('airhorn.mp3'); 
+        // 1. ADD YOUR SOUND URL HERE (Use a direct link to an mp3/wav)
+        const ALARM_SOUND = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3'); 
         let timerInterval = null;
 
-        // --- TIMER UTILITIES ---
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        }
-
-        // --- CORE FUNCTIONS ---
         async function hit(command) {
             const statusEl = document.getElementById('status');
-            
-            // Only update status text if timer isn't running
+            // If a timer is NOT running, show normal status
             if (!timerInterval) {
                 statusEl.innerText = "SENDING...";
                 statusEl.style.color = "white";
@@ -138,7 +68,7 @@
                 statusEl.style.color = "#f87171";
             }
 
-            // Reset status after 2s if no timer is active
+            // Only clear the status if the timer isn't active
             if (!timerInterval) {
                 setTimeout(() => {
                     statusEl.innerText = "BRIDGE READY";
@@ -147,52 +77,42 @@
             }
         }
 
-        function startWithTimer() {
-            // 1. Send the command to Twitch
-            hit('!startgame'); 
-            
-            // 2. Start the 5-minute (300 seconds) countdown
-            runTimer(300); 
+        // New function to handle both the API call and the Timer
+        function startWithTimer(seconds) {
+            hit('!startgame'); // Fire the Twitch command
+            runTimer(seconds); // Start the visual clock
         }
 
         function runTimer(duration) {
             const statusEl = document.getElementById('status');
             let timeLeft = duration;
 
-            // Reset any active timers
+            // Clear any existing timer before starting a new one
             clearInterval(timerInterval);
-            statusEl.classList.remove('timer-finished');
-            statusEl.classList.add('timer-active');
             
             timerInterval = setInterval(() => {
                 timeLeft--;
-                statusEl.innerText = `GAME TIME: ${formatTime(timeLeft)}`;
+                statusEl.innerText = `GAME RUNNING: ${timeLeft}s`;
+                statusEl.style.color = "#4ade80";
 
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     timerInterval = null;
-                    
-                    // Finish State
                     statusEl.innerText = "TIME'S UP!";
-                    statusEl.classList.remove('timer-active');
-                    statusEl.classList.add('timer-finished');
+                    statusEl.style.color = "#f87171";
                     
-                    // Play Sound
-                    ALARM_SOUND.play().catch(e => {
-                        console.error("Playback failed. Make sure you interacted with the page first!", e);
-                    });
+                    // Play the sound
+                    ALARM_SOUND.play().catch(e => console.log("Audio play failed:", e));
                     
-                    // Return to ready after 7 seconds
+                    // Reset to ready after 5 seconds
                     setTimeout(() => {
-                        statusEl.classList.remove('timer-finished');
                         statusEl.innerText = "BRIDGE READY";
                         statusEl.style.color = "#888";
-                    }, 7000);
+                    }, 5000);
                 }
             }, 1000);
         }
 
-        // Global exposing
         window.hit = hit;
         window.startWithTimer = startWithTimer;
     </script>
