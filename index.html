@@ -83,7 +83,7 @@
 
         function startWithTimer() {
             const statusEl = document.getElementById('status');
-            let preCount = 11;
+            let preCount = 11.5;
 
             // 1. Send Twitch Command Immediately
             hit('!startgame', true); 
@@ -107,7 +107,7 @@
                     clearInterval(countdown);
                     // Final poke right before game starts
                     pokeAudio();
-                    runTimer(300); 
+                    runTimer(30); 
                 }
             }, 1000);
         }
@@ -164,3 +164,4 @@
     <div class="bottom-shelf"></div>
 </body>
 </html>
+
