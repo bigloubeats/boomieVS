@@ -41,7 +41,7 @@
         const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
         
         // 1. ADD YOUR SOUND URL HERE (Use a direct link to an mp3/wav)
-        const ALARM_SOUND = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3'); 
+        const ALARM_SOUND = new Audio('airhorn.mp3'); 
         let timerInterval = null;
 
         async function hit(command) {
@@ -90,7 +90,7 @@
             // Clear any existing timer before starting a new one
             clearInterval(timerInterval);
             
-            timerInterval = setInterval(() => {
+            timerInterval = setInterval((30) => {
                 timeLeft--;
                 statusEl.innerText = `GAME RUNNING: ${timeLeft}s`;
                 statusEl.style.color = "#4ade80";
@@ -118,3 +118,4 @@
     </script>
 </body>
 </html>
+
