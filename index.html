@@ -1,120 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>boomieVS Host Remote</title>
-    <style>
-        :root { --twitch-purple: #9147ff; --bg: #0e0e10; }
-        * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        .chat-container { flex: 1; background: #000; }
-        iframe { width: 100%; height: 100%; border: none; }
-        .controls { background: #18181b; padding: 15px; border-top: 2px solid #333; padding-bottom: env(safe-area-inset-bottom, 15px); }
-        .status-bar { text-align: center; font-size: 0.9rem; color: #888; margin-bottom: 12px; font-family: monospace; font-weight: bold; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 500px; margin: 0 auto; }
-        .btn { height: 80px; font-weight: 800; border: none; border-radius: 14px; color: white; background: #26262c; box-shadow: 0 4px 0 #000; font-size: 1.1rem; cursor: pointer; border-left: 6px solid #444; }
-        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; background: var(--twitch-purple); }
-        #start { border-left-color: #4ade80; }
-        #catch { border-left-color: #60a5fa; }
-        #drop  { border-left-color: #f87171; }
-        #minus { border-left-color: #fbbf24; }
-    </style>
-</head>
-<body>
+<script>
+    const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
+    const ALARM_SOUND = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3'); 
+    let timerInterval = null;
 
-    <div class="chat-container">
-        <iframe src="https://www.twitch.tv/embed/bigloubeats81/chat?parent=bigloubeats.github.io" height="100%" width="100%"></iframe>
-    </div>
+    // Helper to format seconds into 0:00 style
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
 
-    <div class="controls">
-        <div id="status" class="status-bar">BRIDGE READY</div>
-        <div class="grid">
-            <button class="btn" id="start" onclick="startWithTimer(60)">START (1m)</button>
-            <button class="btn" id="catch" onclick="hit('!hostcatch')">CATCH</button>
-            <button class="btn" id="drop"  onclick="hit('!hostdrop')">DROP</button>
-            <button class="btn" id="minus" onclick="hit('!hostminus')">MINUS</button>
-        </div>
-    </div>
+    async function hit(command) {
+        const statusEl = document.getElementById('status');
+        if (!timerInterval) {
+            statusEl.innerText = "SENDING...";
+            statusEl.style.color = "white";
+        }
 
-    <script>
-        const BRIDGE_URL = 'https://boomie-bridge.nullsetdesign.workers.dev/';
+        try {
+            const response = await fetch(`${BRIDGE_URL}?cmd=${encodeURIComponent(command)}`);
+            if (response.ok && !timerInterval) {
+                statusEl.innerText = "SENT: " + command;
+                statusEl.style.color = "#4ade80";
+            }
+        } catch (err) {
+            statusEl.innerText = "CONNECTION FAILED";
+            statusEl.style.color = "#f87171";
+        }
+
+        if (!timerInterval) {
+            setTimeout(() => {
+                statusEl.innerText = "BRIDGE READY";
+                statusEl.style.color = "#888";
+            }, 2000);
+        }
+    }
+
+    // Fixed to 300 seconds (5 minutes)
+    function startWithTimer() {
+        hit('!startgame'); 
+        runTimer(300); 
+    }
+
+    function runTimer(duration) {
+        const statusEl = document.getElementById('status');
+        let timeLeft = duration;
+
+        clearInterval(timerInterval);
         
-        // 1. ADD YOUR SOUND URL HERE (Use a direct link to an mp3/wav)
-        const ALARM_SOUND = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3'); 
-        let timerInterval = null;
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            statusEl.innerText = `GAME TIME: ${formatTime(timeLeft)}`;
+            statusEl.style.color = "#4ade80";
 
-        async function hit(command) {
-            const statusEl = document.getElementById('status');
-            // If a timer is NOT running, show normal status
-            if (!timerInterval) {
-                statusEl.innerText = "SENDING...";
-                statusEl.style.color = "white";
-            }
-
-            try {
-                const response = await fetch(`${BRIDGE_URL}?cmd=${encodeURIComponent(command)}`);
-                if (response.ok) {
-                    if (!timerInterval) {
-                        statusEl.innerText = "SENT: " + command;
-                        statusEl.style.color = "#4ade80";
-                    }
-                } else {
-                    statusEl.innerText = "BRIDGE ERROR";
-                    statusEl.style.color = "#f87171";
-                }
-            } catch (err) {
-                statusEl.innerText = "CONNECTION FAILED";
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                statusEl.innerText = "TIME'S UP!";
                 statusEl.style.color = "#f87171";
-            }
-
-            // Only clear the status if the timer isn't active
-            if (!timerInterval) {
+                
+                ALARM_SOUND.play().catch(e => console.log("Audio play failed:", e));
+                
                 setTimeout(() => {
                     statusEl.innerText = "BRIDGE READY";
                     statusEl.style.color = "#888";
-                }, 2000);
+                }, 5000);
             }
-        }
+        }, 1000);
+    }
 
-        // New function to handle both the API call and the Timer
-        function startWithTimer(seconds) {
-            hit('!startgame'); // Fire the Twitch command
-            runTimer(seconds); // Start the visual clock
-        }
-
-        function runTimer(duration) {
-            const statusEl = document.getElementById('status');
-            let timeLeft = duration;
-
-            // Clear any existing timer before starting a new one
-            clearInterval(timerInterval);
-            
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                statusEl.innerText = `GAME RUNNING: ${timeLeft}s`;
-                statusEl.style.color = "#4ade80";
-
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                    statusEl.innerText = "TIME'S UP!";
-                    statusEl.style.color = "#f87171";
-                    
-                    // Play the sound
-                    ALARM_SOUND.play().catch(e => console.log("Audio play failed:", e));
-                    
-                    // Reset to ready after 5 seconds
-                    setTimeout(() => {
-                        statusEl.innerText = "BRIDGE READY";
-                        statusEl.style.color = "#888";
-                    }, 5000);
-                }
-            }, 1000);
-        }
-
-        window.hit = hit;
-        window.startWithTimer = startWithTimer;
-    </script>
-</body>
-</html>
+    window.hit = hit;
+    window.startWithTimer = startWithTimer;
+</script>
